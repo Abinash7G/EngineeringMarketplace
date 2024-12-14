@@ -1,1 +1,25 @@
 env/
+# Dependencies
+node_modules/
+
+# Build output
+build/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+.DS_Store
+Thumbs.db
+
+# IDE settings (Optional)
+.vscode/
+.idea/
+*.swp
