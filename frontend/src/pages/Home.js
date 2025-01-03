@@ -17,7 +17,7 @@ const Home = () => {
     <div style={styles.container}>
       {/* Hero Section with Carousel */}
       <header style={styles.heroSection}>
-      <Carousel
+      <Carousel //hello
   autoPlay
   infiniteLoop
   showThumbs={false}
