@@ -7,6 +7,7 @@ const SignupPage = () => {
     email: "",
     password: "",
     contactNumber: "",
+    role: "Client",
   });
 
   const [message, setMessage] = useState("");
@@ -18,7 +19,7 @@ const SignupPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await API.post("user-signup/", formData);
+      const response = await API.post("api/signup/", formData);
       setMessage(response.data.message);
     } catch (error) {
       if (error.response && error.response.data) {
