@@ -77,6 +77,9 @@ const Navbar = () => {
         <Link to="/login" style={styles.link}>
           Login
         </Link>
+        <Link to= "/CompanyRegistration" style={styles.link}>
+        <button>register as company</button>
+        </Link>
       </div>
     </nav>
   );
