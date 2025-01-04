@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import API from "../services/api";
+import { FaGoogle } from "react-icons/fa"; // Import Google icon from react-icons
 
 const Login = () => {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    role: "Client", // Default role
-    companyType: "", // Default empty for Company-specific roles
   });
   const [message, setMessage] = useState("");
 
@@ -23,12 +22,6 @@ const Login = () => {
       if (response.status === 200) {
         localStorage.setItem("access_token", response.data.access);
         localStorage.setItem("refresh_token", response.data.refresh);
-        localStorage.setItem("user_role", formData.role);
-
-        if (formData.role === "Company") {
-          localStorage.setItem("company_type", formData.companyType);
-        }
-
         setMessage("Login successful!");
       } else {
         setMessage("Unexpected response from the server. Please try again.");
@@ -61,37 +54,6 @@ const Login = () => {
     <div style={styles.container}>
       <h1 style={styles.title}>Login</h1>
       <form onSubmit={handleSubmit} style={styles.form}>
-        {/* Role Selection */}
-        <label style={styles.label}>Logging as a :</label>
-        <select
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          style={styles.select}
-        >
-          <option value="Client">Client</option>
-          <option value="Company">Company</option>
-        </select>
-
-        {/* Company Type Selection */}
-        {formData.role === "Company" && (
-          <>
-            <label style={styles.label}>Company Type:</label>
-            <select
-              name="companyType"
-              value={formData.companyType}
-              onChange={handleChange}
-              style={styles.select}
-            >
-              <option value="">Select Company Type</option>
-              <option value="Construction Company">
-                Construction Company
-              </option>
-              <option value="Material Supplier">Material Supplier</option>
-            </select>
-          </>
-        )}
-
         {/* Login Fields */}
         <input
           type="text"
@@ -121,7 +83,7 @@ const Login = () => {
         Forgot Password?
       </p>
       <button style={styles.googleButton} onClick={handleGoogleLogin}>
-        Login with Google
+        <FaGoogle style={{ marginRight: "8px" }} /> Login with Google
       </button>
       <p style={styles.createAccount}>
         Don’t have an account?{" "}
@@ -136,7 +98,7 @@ const Login = () => {
 const styles = {
   container: {
     maxWidth: "400px",
-    margin: "0 auto",
+    margin: "auto",
     padding: "20px",
     textAlign: "center",
     fontFamily: "Arial, sans-serif",
@@ -149,25 +111,10 @@ const styles = {
     marginBottom: "20px",
     color: "#0073e6",
   },
-  label: {
-    fontSize: "1rem",
-    marginBottom: "5px",
-    display: "block",
-    textAlign: "left",
-  },
   form: {
     display: "flex",
     flexDirection: "column",
     gap: "10px",
-  },
-  select: {
-    padding: "10px",
-    fontSize: "1rem",
-    borderRadius: "5px",
-    border: "1px solid #ccc",
-    outline: "none",
-    backgroundColor: "#fff",
-    cursor: "pointer",
   },
   input: {
     padding: "10px",
@@ -195,15 +142,21 @@ const styles = {
     marginTop: "10px",
   },
   googleButton: {
-    marginTop: "15px",
-    padding: "10px",
+    marginTop: "20npx",
+    padding: "20npx",
     fontSize: "1rem",
     color: "white",
     backgroundColor: "#db4437",
     border: "none",
     borderRadius: "5px",
     cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     transition: "background-color 0.3s",
+    marginLeft : "auto",
+    marginRight: "auto",
+    width:"fit-content",
   },
   createAccount: {
     marginTop: "20px",
