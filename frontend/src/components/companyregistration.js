@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import API from "../services/api";
 
 const CompanyRegistration = () => {
@@ -8,19 +8,45 @@ const CompanyRegistration = () => {
     companyEmail: "",
     companyRegistrationId: "",
     location: "",
-    servicesProvided: "",
+    servicesProvided: [],
   });
 
+  const [servicesOptions, setServicesOptions] = useState([]);
   const [message, setMessage] = useState("");
 
+  // Fetch services from backend
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await API.get("/api/services/");
+        setServicesOptions(response.data); // Assuming API returns an array of service objects
+      } catch (error) {
+        console.error("Error fetching services:", error);
+      }
+    };
+    fetchServices();
+  }, []);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+
+    if (type === "checkbox") {
+      const serviceId = parseInt(value, 10);
+      setFormData((prevData) => ({
+        ...prevData,
+        servicesProvided: checked
+          ? [...prevData.servicesProvided, serviceId]
+          : prevData.servicesProvided.filter((id) => id !== serviceId),
+      }));
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await API.post("company-signup/", formData);
+      const response = await API.post("/api/signup/", formData);
       setMessage(response.data.message);
     } catch (error) {
       if (error.response && error.response.data) {
@@ -92,15 +118,28 @@ const CompanyRegistration = () => {
           required
         />
 
-        <label style={styles.label}>List of Services:</label>
-        <textarea
-          name="servicesProvided"
-          placeholder="List the services you provide"
-          value={formData.servicesProvided}
-          onChange={handleChange}
-          style={styles.textarea}
-          required
-        />
+        {formData.companyType === "construction" && (
+          <>
+            <label style={styles.label}>List of Services:</label>
+            <div style={styles.checkboxContainer}>
+              {servicesOptions.map((service) => (
+                <div key={service.id} style={styles.checkboxItem}>
+                  <input
+                    type="checkbox"
+                    id={`service-${service.id}`}
+                    name="servicesProvided"
+                    value={service.id}
+                    checked={formData.servicesProvided.includes(service.id)}
+                    onChange={handleChange}
+                  />
+                  <label htmlFor={`service-${service.id}`} style={styles.checkboxLabel}>
+                    {service.name}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <button type="submit" style={styles.button}>
           Register
@@ -155,15 +194,17 @@ const styles = {
     outline: "none",
     transition: "border-color 0.3s",
   },
-  textarea: {
-    padding: "10px",
-    fontSize: "1rem",
-    borderRadius: "5px",
-    border: "1px solid #ccc",
-    outline: "none",
-    transition: "border-color 0.3s",
-    minHeight: "80px",
-    resize: "vertical",
+  checkboxContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "5px",
+  },
+  checkboxItem: {
+    display: "flex",
+    alignItems: "center",
+  },
+  checkboxLabel: {
+    marginLeft: "5px",
   },
   button: {
     padding: "10px",
