@@ -4,6 +4,10 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './components/Login';
 import Signup from './components/Signup';
+import CompanyRegistration from './components/companyregistration';
+
+
+
 
 const App = () => {
   return (
@@ -13,6 +17,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/companyregistration" element={<CompanyRegistration />} />
       </Routes>
     </Router>
   );
