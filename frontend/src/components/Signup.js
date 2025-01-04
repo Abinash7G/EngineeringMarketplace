@@ -1,19 +1,12 @@
 import React, { useState } from "react";
 import API from "../services/api";
 
-const Signup = () => {
+const SignupPage = () => {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
-    role: "client", // Default to client role
-    companyType: "", // Specify type of company: Construction or Material Supplier
-    companyName: "",
-    companyEmail: "",
-    companyRegistrationId: "",
-    location: "",
-    servicesProvided: "", // For construction companies
-    materialsSupplied: "", // For material suppliers
+    contactNumber: "",
   });
 
   const [message, setMessage] = useState("");
@@ -25,17 +18,16 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-        const response = await API.post("signup/", formData);
-        setMessage(response.data.message);
+      const response = await API.post("user-signup/", formData);
+      setMessage(response.data.message);
     } catch (error) {
-        if (error.response && error.response.data) {
-            setMessage(error.response.data.error); // Show backend error
-        } else {
-            setMessage("Signup failed. Please try again.");
-        }
+      if (error.response && error.response.data) {
+        setMessage(error.response.data.error);
+      } else {
+        setMessage("Signup failed. Please try again.");
+      }
     }
-};
-
+  };
 
   return (
     <div style={styles.container}>
@@ -45,7 +37,7 @@ const Signup = () => {
         <input
           type="text"
           name="username"
-          placeholder="Username"
+          placeholder="Enter your username"
           value={formData.username}
           onChange={handleChange}
           style={styles.input}
@@ -56,7 +48,7 @@ const Signup = () => {
         <input
           type="email"
           name="email"
-          placeholder="Email"
+          placeholder="Enter your email"
           value={formData.email}
           onChange={handleChange}
           style={styles.input}
@@ -67,114 +59,23 @@ const Signup = () => {
         <input
           type="password"
           name="password"
-          placeholder="Password"
+          placeholder="Enter your password"
           value={formData.password}
           onChange={handleChange}
           style={styles.input}
           required
         />
 
-        <label style={styles.label}>Sign up as:</label>
-        <select
-          name="role"
-          value={formData.role}
+        <label style={styles.label}>Contact Number:</label>
+        <input
+          type="text"
+          name="contactNumber"
+          placeholder="Enter your contact number"
+          value={formData.contactNumber}
           onChange={handleChange}
-          style={styles.select}
-        >
-          <option value="client">Client</option>
-          <option value="company">Company</option>
-        </select>
-
-        {/* Additional fields for companies */}
-        {formData.role === "company" && (
-          <>
-            <label style={styles.label}>Company Type:</label>
-            <select
-              name="companyType"
-              value={formData.companyType}
-              onChange={handleChange}
-              style={styles.select}
-              required
-            >
-              <option value="">Select Company Type</option>
-              <option value="construction">Construction Company</option>
-              <option value="supplier">Material Supplier</option>
-            </select>
-
-            <label style={styles.label}>Company Name:</label>
-            <input
-              type="text"
-              name="companyName"
-              placeholder="Company Name"
-              value={formData.companyName}
-              onChange={handleChange}
-              style={styles.input}
-              required
-            />
-
-            <label style={styles.label}>Company Email:</label>
-            <input
-              type="email"
-              name="companyEmail"
-              placeholder="Company Email"
-              value={formData.companyEmail}
-              onChange={handleChange}
-              style={styles.input}
-              required
-            />
-
-            <label style={styles.label}>Company Registration ID:</label>
-            <input
-              type="text"
-              name="companyRegistrationId"
-              placeholder="Registration ID"
-              value={formData.companyRegistrationId}
-              onChange={handleChange}
-              style={styles.input}
-              required
-            />
-
-            <label style={styles.label}>Location:</label>
-            <input
-              type="text"
-              name="location"
-              placeholder="Location"
-              value={formData.location}
-              onChange={handleChange}
-              style={styles.input}
-              required
-            />
-
-            {/* Additional fields based on company type */}
-            {formData.companyType === "construction" && (
-              <>
-                <label style={styles.label}>Services Provided:</label>
-                <textarea
-                  name="servicesProvided"
-                  placeholder="List the services you provide"
-                  value={formData.servicesProvided}
-                  onChange={handleChange}
-                  style={styles.textarea}
-                  required
-                />
-              </>
-            )}
-
-            {formData.companyType === "supplier" && (
-              <>
-                <label style={styles.label}>Materials Supplied:</label>
-                <textarea
-                  name="materialsSupplied"
-                  placeholder="List the materials you supply"
-                  value={formData.materialsSupplied}
-                  onChange={handleChange}
-                  style={styles.textarea}
-                  required
-                />
-              </>
-            )}
-          </>
-        )}
+          style={styles.input}
+          required
+        />
 
         <button type="submit" style={styles.button}>
           Signup
@@ -194,7 +95,6 @@ const Signup = () => {
   );
 };
 
-// CSS Styles
 const styles = {
   container: {
     maxWidth: "500px",
@@ -230,24 +130,6 @@ const styles = {
     outline: "none",
     transition: "border-color 0.3s",
   },
-  select: {
-    padding: "10px",
-    fontSize: "1rem",
-    borderRadius: "5px",
-    border: "1px solid #ccc",
-    outline: "none",
-    transition: "border-color 0.3s",
-  },
-  textarea: {
-    padding: "10px",
-    fontSize: "1rem",
-    borderRadius: "5px",
-    border: "1px solid #ccc",
-    outline: "none",
-    transition: "border-color 0.3s",
-    minHeight: "80px",
-    resize: "vertical",
-  },
   button: {
     padding: "10px",
     fontSize: "1rem",
@@ -265,4 +147,4 @@ const styles = {
   },
 };
 
-export default Signup;
+export default SignupPage;
