@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import CompanyRegistration from './components/companyregistration';
+import AdminDashboard from './pages/AdminDashboard.js';
 
 
 
@@ -18,6 +19,7 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/companyregistration" element={<CompanyRegistration />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </Router>
   );
