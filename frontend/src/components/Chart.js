@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { Box } from "@mui/material";
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -49,22 +50,20 @@ const Chart = () => {
   };
 
   return (
-    <div style={styles.chartContainer}>
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: "800px",
+        margin: "0 auto",
+        backgroundColor: "white",
+        padding: "20px",
+        borderRadius: "10px",
+        boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+      }}
+    >
       <Bar data={data} options={options} />
-    </div>
+    </Box>
   );
-};
-
-const styles = {
-  chartContainer: {
-    width: "100%",
-    maxWidth: "800px",
-    margin: "0 auto",
-    backgroundColor: "white",
-    padding: "20px",
-    borderRadius: "10px",
-    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
-  },
 };
 
 export default Chart;

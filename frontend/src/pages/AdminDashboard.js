@@ -2,6 +2,21 @@ import React, { useState } from "react";
 import { FaUsers, FaTools, FaChartBar, FaBuilding } from "react-icons/fa";
 import Sidebar from "../components/Sidebar";
 import Chart from "../components/Chart";
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+} from "@mui/material";
 
 const AdminDashboard = () => {
   const [companies, setCompanies] = useState([
@@ -36,226 +51,183 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div style={styles.dashboardContainer}>
+    <Box
+      sx={{
+        display: "flex", // Flex layout to align sidebar and main content
+        height: "100vh", // Full viewport height
+        backgroundColor: "#f9f9f9",
+      }}
+    >
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content */}
-      <div style={styles.mainContent}>
-        <header style={styles.header}>
-          <h1>Admin Dashboard</h1>
-        </header>
+      <Box
+        sx={{
+          flex: 1, // Main content takes the remaining space
+          overflowY: "auto", // Scrollable main content
+          padding: "20px",
+        }}
+      >
+        <Typography variant="h4" sx={{ marginBottom: "20px" }}>
+          Admin Dashboard
+        </Typography>
 
         {/* Overview Cards */}
-        <section style={styles.overview}>
-          <div style={styles.card}>
-            <FaUsers size={30} />
-            <div>
-              <h3>Total Users</h3>
-              <p>1200</p>
-            </div>
-          </div>
-          <div style={styles.card}>
-            <FaTools size={30} />
-            <div>
-              <h3>Active Services</h3>
-              <p>350</p>
-            </div>
-          </div>
-          <div style={styles.card}>
-            <FaBuilding size={30} />
-            <div>
-              <h3>Total Companies</h3>
-              <p>200</p>
-            </div>
-          </div>
-          <div style={styles.card}>
-            <FaChartBar size={30} />
-            <div>
-              <h3>Total Revenue</h3>
-              <p>$45,000</p>
-            </div>
-          </div>
-        </section>
+        <Grid container spacing={3} sx={{ marginBottom: "20px" }}>
+          {[
+            { title: "Total Users", value: "1200", icon: <FaUsers /> },
+            { title: "Active Services", value: "350", icon: <FaTools /> },
+            { title: "Total Companies", value: "200", icon: <FaBuilding /> },
+            { title: "Total Revenue", value: "$45,000", icon: <FaChartBar /> },
+          ].map((item, index) => (
+            <Grid item xs={12} sm={6} md={3} key={index}>
+              <Card>
+                <CardContent sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  {item.icon}
+                  <Box>
+                    <Typography variant="h6">{item.title}</Typography>
+                    <Typography variant="h4" color="primary">
+                      {item.value}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
 
         {/* Analytics Charts */}
-        <section style={styles.analytics}>
-          <h2>Analytics</h2>
+        <Box sx={{ marginBottom: "20px" }}>
+          <Typography variant="h5">Analytics</Typography>
           <Chart />
-        </section>
+        </Box>
 
         {/* Company Management */}
-        <section style={styles.companyManagement}>
-          <h2>Company Management</h2>
-          <div style={styles.tableHeader}>
-            <div>ID</div>
-            <div>Name</div>
-            <div>Email</div>
-            <div>Role</div>
-            <div>Subscription</div>
-            <div>Actions</div>
-          </div>
-          {companies.map((company) => (
-            <div key={company.id} style={styles.tableRow}>
-              <div>{company.id}</div>
-              <div>{company.name}</div>
-              <div>{company.email}</div>
-              <div>{company.role}</div>
-              <div>{company.subscription}</div>
-              <div>
-                <button style={styles.approveButton} onClick={() => approveCompany(company.id)}>
-                  Approve
-                </button>
-                <button style={styles.rejectButton} onClick={() => rejectCompany(company.id)}>
-                  Reject
-                </button>
-                <button style={styles.viewButton} onClick={() => alert(`Viewing details for ${company.name}`)}>
-                  View Details
-                </button>
-              </div>
-            </div>
-          ))}
-        </section>
+        <Box sx={{ marginBottom: "20px" }}>
+          <Typography variant="h5" sx={{ marginBottom: "10px" }}>
+            Company Management
+          </Typography>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>ID</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Role</TableCell>
+                  <TableCell>Subscription</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {companies.map((company) => (
+                  <TableRow key={company.id}>
+                    <TableCell>{company.id}</TableCell>
+                    <TableCell>{company.name}</TableCell>
+                    <TableCell>{company.email}</TableCell>
+                    <TableCell>{company.role}</TableCell>
+                    <TableCell>{company.subscription}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        sx={{ marginRight: "5px" }}
+                        onClick={() => approveCompany(company.id)}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        sx={{ marginRight: "5px" }}
+                        onClick={() => rejectCompany(company.id)}
+                      >
+                        Reject
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="info"
+                        size="small"
+                        onClick={() => alert(`Viewing details for ${company.name}`)}
+                      >
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
 
         {/* Safety Training */}
-        <section style={styles.safetyTraining}>
-          <h2>Safety Training Requests</h2>
-          <div style={styles.tableHeader}>
-            <div>ID</div>
-            <div>Company</div>
-            <div>Request Training</div>
-          </div>
-          {companies
-            .filter((company) => company.safetyTraining)
-            .map((company) => (
-              <div key={company.id} style={styles.tableRow}>
-                <div>{company.id}</div>
-                <div>{company.name}</div>
-                <div>
-                  <button style={styles.requestButton} onClick={() => alert(`Requested training for ${company.name}`)}>
-                    Request Training
-                  </button>
-                </div>
-              </div>
-            ))}
-        </section>
+        <Box sx={{ marginBottom: "20px" }}>
+          <Typography variant="h5">Safety Training Requests</Typography>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>ID</TableCell>
+                  <TableCell>Company</TableCell>
+                  <TableCell>Request Training</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {companies
+                  .filter((company) => company.safetyTraining)
+                  .map((company) => (
+                    <TableRow key={company.id}>
+                      <TableCell>{company.id}</TableCell>
+                      <TableCell>{company.name}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={() => alert(`Requested training for ${company.name}`)}
+                        >
+                          Request Training
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
 
         {/* Feedback and Disputes */}
-        <section style={styles.feedbackSection}>
-          <h2>Feedback & Disputes</h2>
+        <Box sx={{ marginBottom: "20px" }}>
+          <Typography variant="h5">Feedback & Disputes</Typography>
           {companies.map((company) => (
-            <div key={company.id} style={styles.feedbackRow}>
-              <h3>{company.name}</h3>
-              <p>{company.feedback}</p>
-              <button style={styles.resolveButton} onClick={() => alert(`Resolved issue for ${company.name}`)}>
+            <Box
+              key={company.id}
+              sx={{
+                backgroundColor: "white",
+                padding: "10px",
+                borderRadius: "5px",
+                boxShadow: 1,
+                marginBottom: "10px",
+              }}
+            >
+              <Typography variant="h6">{company.name}</Typography>
+              <Typography variant="body1">{company.feedback}</Typography>
+              <Button
+                variant="contained"
+                color="warning"
+                sx={{ marginTop: "10px" }}
+                onClick={() => alert(`Resolved issue for ${company.name}`)}
+              >
                 Resolve Dispute
-              </button>
-            </div>
+              </Button>
+            </Box>
           ))}
-        </section>
-      </div>
-    </div>
+        </Box>
+      </Box>
+    </Box>
   );
-};
-
-const styles = {
-  dashboardContainer: {
-    display: "flex",
-  },
-  mainContent: {
-    flex: 1,
-    padding: "20px",
-    backgroundColor: "#f9f9f9",
-  },
-  header: {
-    marginBottom: "20px",
-  },
-  overview: {
-    display: "flex",
-    gap: "20px",
-    marginBottom: "20px",
-  },
-  card: {
-    flex: 1,
-    padding: "20px",
-    backgroundColor: "white",
-    borderRadius: "10px",
-    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
-    display: "flex",
-    alignItems: "center",
-    gap: "15px",
-  },
-  analytics: {
-    marginBottom: "20px",
-  },
-  companyManagement: {
-    padding: "20px",
-    backgroundColor: "white",
-    borderRadius: "10px",
-    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
-  },
-  tableHeader: {
-    display: "grid",
-    gridTemplateColumns: "1fr 2fr 2fr 2fr 2fr 3fr",
-    fontWeight: "bold",
-    paddingBottom: "10px",
-    borderBottom: "2px solid #ddd",
-  },
-  tableRow: {
-    display: "grid",
-    gridTemplateColumns: "1fr 2fr 2fr 2fr 2fr 3fr",
-    alignItems: "center",
-    padding: "10px 0",
-    borderBottom: "1px solid #ddd",
-  },
-  approveButton: {
-    backgroundColor: "#4CAF50",
-    color: "white",
-    border: "none",
-    padding: "5px 10px",
-    borderRadius: "5px",
-    marginRight: "10px",
-    cursor: "pointer",
-  },
-  rejectButton: {
-    backgroundColor: "#f44336",
-    color: "white",
-    border: "none",
-    padding: "5px 10px",
-    borderRadius: "5px",
-    marginRight:"10px",
-    cursor: "pointer",
-  },
-  viewButton: {
-    backgroundColor: "#007bff",
-    color: "white",
-    border: "none",
-    padding: "5px 10px",
-    borderRadius: "5px",
-    cursor: "pointer",
-    marginRight: "20px",
-  },
-  safetyTraining: {
-    marginTop: "20px",
-  },
-  feedbackSection: {
-    marginTop: "20px",
-    backgroundColor: "white",
-    padding: "20px",
-    borderRadius: "10px",
-    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
-  },
-  feedbackRow: {
-    marginBottom: "10px",
-  },
-  resolveButton: {
-    backgroundColor: "#ffa500",
-    color: "white",
-    border: "none",
-    padding: "5px 10px",
-    borderRadius: "5px",
-    cursor: "pointer",
-  },
 };
 
 export default AdminDashboard;
