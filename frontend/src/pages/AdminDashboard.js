@@ -51,12 +51,24 @@ const AdminDashboard = () => {
   };
 
   return (
-    <Box sx={{ display: "flex", backgroundColor: "#f9f9f9", minHeight: "100vh" }}>
+    <Box
+      sx={{
+        display: "flex", // Flex layout to align sidebar and main content
+        height: "100vh", // Full viewport height
+        backgroundColor: "#f9f9f9",
+      }}
+    >
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content */}
-      <Box sx={{ flex: 1, padding: "20px" }}>
+      <Box
+        sx={{
+          flex: 1, // Main content takes the remaining space
+          overflowY: "auto", // Scrollable main content
+          padding: "20px",
+        }}
+      >
         <Typography variant="h4" sx={{ marginBottom: "20px" }}>
           Admin Dashboard
         </Typography>
