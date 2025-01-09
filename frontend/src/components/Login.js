@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 import API from "../services/api";
 import { FaGoogle } from "react-icons/fa"; // Import Google icon from react-icons
+import {
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Container,
+} from "@mui/material";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -51,128 +58,79 @@ const Login = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Login</h1>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        {/* Login Fields */}
-        <input
-          type="text"
+    <Container maxWidth="xs" sx={{ mt: 4, p: 3, boxShadow: 3, borderRadius: 2 }}>
+      <Typography variant="h4" align="center" gutterBottom>
+        Login
+      </Typography>
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+      >
+        <TextField
+          label="Username"
           name="username"
-          placeholder="Username"
+          variant="outlined"
           value={formData.username}
           onChange={handleChange}
-          style={styles.input}
+          fullWidth
         />
-        <input
-          type="password"
+        <TextField
+          label="Password"
           name="password"
-          placeholder="Password"
+          type="password"
+          variant="outlined"
           value={formData.password}
           onChange={handleChange}
-          style={styles.input}
+          fullWidth
         />
-
-        {/* Login Button */}
-        <button type="submit" style={styles.button}>
+        <Button type="submit" variant="contained" color="primary" fullWidth>
           Login
-        </button>
-      </form>
+        </Button>
+      </Box>
 
-      {/* Additional Options */}
-      <p style={styles.link} onClick={handleForgotPassword}>
+      <Typography
+        variant="body2"
+        align="center"
+        sx={{ mt: 2, color: "primary.main", cursor: "pointer" }}
+        onClick={handleForgotPassword}
+      >
         Forgot Password?
-      </p>
-      <button style={styles.googleButton} onClick={handleGoogleLogin}>
-        <FaGoogle style={{ marginRight: "8px" }} /> Login with Google
-      </button>
-      <p style={styles.createAccount}>
-        Don’t have an account?{" "}
-        <span style={styles.createAccountLink}>Create one</span>
-      </p>
-      {message && <p style={styles.message}>{message}</p>}
-    </div>
-  );
-};
+      </Typography>
 
-// CSS Styles
-const styles = {
-  container: {
-    maxWidth: "400px",
-    margin: "auto",
-    padding: "20px",
-    textAlign: "center",
-    fontFamily: "Arial, sans-serif",
-    backgroundColor: "#f9f9f9",
-    borderRadius: "10px",
-    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
-  },
-  title: {
-    fontSize: "2rem",
-    marginBottom: "20px",
-    color: "#0073e6",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  input: {
-    padding: "10px",
-    fontSize: "1rem",
-    borderRadius: "5px",
-    border: "1px solid #ccc",
-    outline: "none",
-    transition: "border-color 0.3s",
-  },
-  button: {
-    padding: "10px",
-    fontSize: "1rem",
-    color: "white",
-    backgroundColor: "#0073e6",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-    transition: "background-color 0.3s",
-  },
-  link: {
-    color: "#0073e6",
-    fontSize: "0.9rem",
-    cursor: "pointer",
-    textDecoration: "underline",
-    marginTop: "10px",
-  },
-  googleButton: {
-    marginTop: "20npx",
-    padding: "20npx",
-    fontSize: "1rem",
-    color: "white",
-    backgroundColor: "#db4437",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "background-color 0.3s",
-    marginLeft : "auto",
-    marginRight: "auto",
-    width:"fit-content",
-  },
-  createAccount: {
-    marginTop: "20px",
-    fontSize: "0.9rem",
-  },
-  createAccountLink: {
-    color: "#0073e6",
-    fontWeight: "bold",
-    cursor: "pointer",
-    textDecoration: "underline",
-  },
-  message: {
-    marginTop: "15px",
-    fontSize: "1rem",
-    color: "#d9534f",
-  },
+      <Button
+        variant="contained"
+        startIcon={<FaGoogle />}
+        onClick={handleGoogleLogin}
+        sx={{
+          mt: 2,
+          bgcolor: "#db4437",
+          color: "white",
+          "&:hover": { bgcolor: "#c33d2e" },
+        }}
+        fullWidth
+      >
+        Login with Google
+      </Button>
+
+      <Typography variant="body2" align="center" sx={{ mt: 2 }}>
+        Don’t have an account?{" "}
+        <span style={{ fontWeight: "bold", cursor: "pointer", color: "#0073e6" }}>
+          Create one
+        </span>
+      </Typography>
+
+      {message && (
+        <Typography
+          variant="body1"
+          align="center"
+          sx={{ mt: 2, color: "error.main" }}
+        >
+          {message}
+        </Typography>
+      )}
+    </Container>
+  );
 };
 
 export default Login;

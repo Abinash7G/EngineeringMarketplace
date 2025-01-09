@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import API from "../services/api";
+import { TextField, Button, Typography, Box, Container } from "@mui/material";
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -31,121 +32,78 @@ const SignupPage = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Signup</h1>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <label style={styles.label}>Username:</label>
-        <input
-          type="text"
+    <Container
+      maxWidth="sm"
+      sx={{
+        mt: 4,
+        p: 3,
+        boxShadow: 3,
+        borderRadius: 2,
+        bgcolor: "#f9f9f9",
+      }}
+    >
+      <Typography variant="h4" align="center" gutterBottom sx={{ color: "#0073e6" }}>
+        Signup Page 
+      </Typography>
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+      >
+        <TextField
+          label="Username"
           name="username"
-          placeholder="Enter your username"
+          variant="outlined"
           value={formData.username}
           onChange={handleChange}
-          style={styles.input}
+          fullWidth
           required
         />
-
-        <label style={styles.label}>Email:</label>
-        <input
-          type="email"
+        <TextField
+          label="Email"
           name="email"
-          placeholder="Enter your email"
+          type="email"
+          variant="outlined"
           value={formData.email}
           onChange={handleChange}
-          style={styles.input}
+          fullWidth
           required
         />
-
-        <label style={styles.label}>Password:</label>
-        <input
-          type="password"
+        <TextField
+          label="Password"
           name="password"
-          placeholder="Enter your password"
+          type="password"
+          variant="outlined"
           value={formData.password}
           onChange={handleChange}
-          style={styles.input}
+          fullWidth
           required
         />
-
-        <label style={styles.label}>Contact Number:</label>
-        <input
-          type="text"
+        <TextField
+          label="Contact Number"
           name="contactNumber"
-          placeholder="Enter your contact number"
+          type="text"
+          variant="outlined"
           value={formData.contactNumber}
           onChange={handleChange}
-          style={styles.input}
+          fullWidth
           required
         />
-
-        <button type="submit" style={styles.button}>
+        <Button type="submit" variant="contained" color="primary" fullWidth>
           Signup
-        </button>
-      </form>
+        </Button>
+      </Box>
       {message && (
-        <p
-          style={{
-            ...styles.message,
-            color: message.includes("successful") ? "#28a745" : "#d9534f",
-          }}
+        <Typography
+          variant="body1"
+          align="center"
+          sx={{ mt: 2, color: message.includes("successful") ? "#28a745" : "#d9534f" }}
         >
           {message}
-        </p>
+        </Typography>
       )}
-    </div>
+    </Container>
   );
-};
-
-const styles = {
-  container: {
-    maxWidth: "500px",
-    margin: "0 auto",
-    padding: "20px",
-    textAlign: "left",
-    fontFamily: "Arial, sans-serif",
-    backgroundColor: "#f9f9f9",
-    borderRadius: "10px",
-    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
-  },
-  title: {
-    fontSize: "2rem",
-    marginBottom: "20px",
-    color: "#0073e6",
-    textAlign: "center",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  label: {
-    fontWeight: "bold",
-    fontSize: "1rem",
-    marginBottom: "5px",
-  },
-  input: {
-    padding: "10px",
-    fontSize: "1rem",
-    borderRadius: "5px",
-    border: "1px solid #ccc",
-    outline: "none",
-    transition: "border-color 0.3s",
-  },
-  button: {
-    padding: "10px",
-    fontSize: "1rem",
-    color: "white",
-    backgroundColor: "#0073e6",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-    transition: "background-color 0.3s",
-  },
-  message: {
-    marginTop: "15px",
-    fontSize: "1rem",
-    textAlign: "center",
-  },
 };
 
 export default SignupPage;
