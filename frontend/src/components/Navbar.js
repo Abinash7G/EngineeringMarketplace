@@ -26,6 +26,29 @@ const Navbar = () => {
     setAnchorEl(null);
   };
 
+  console.log("Navbar component rendered");
+  console.log("Dropdown visibility:", dropdownVisible);
+  console.log("Anchor element:", anchorEl);
+
+  const navLinkStyles = {
+    color: "white",
+    textDecoration: "none",
+    textTransform: "none",
+    fontWeight: "bold",
+    "&:hover": {
+      textDecoration: "underline",
+    },
+  };
+
+  const dropdownStyles = {
+    textDecoration: "none",
+    color: "#007BFF",
+    fontWeight: "normal",
+    "&:hover": {
+      backgroundColor: "rgba(0, 123, 255, 0.1)",
+    },
+  };
+
   return (
     <AppBar position="static" sx={{ backgroundColor: "#007BFF" }}>
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -162,7 +185,7 @@ const Navbar = () => {
           </Button>
           <Button
             component={Link}
-            to="/company-registration"
+            to="/companyregistration"
             variant="contained"
             color="warning"
             sx={{
@@ -176,25 +199,6 @@ const Navbar = () => {
       </Toolbar>
     </AppBar>
   );
-};
-
-const navLinkStyles = {
-  color: "white",
-  textDecoration: "none",
-  textTransform: "none",
-  fontWeight: "bold",
-  "&:hover": {
-    textDecoration: "underline",
-  },
-};
-
-const dropdownStyles = {
-  textDecoration: "none",
-  color: "#007BFF",
-  fontWeight: "normal",
-  "&:hover": {
-    backgroundColor: "rgba(0, 123, 255, 0.1)",
-  },
 };
 
 export default Navbar;
