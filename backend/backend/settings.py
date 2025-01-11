@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'rest_framework',
-    'marketplace',
+    'Ersathi',
 ]
 
 MIDDLEWARE = [
@@ -134,3 +134,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # For development only; restrict in production.
+
+#
+AUTH_USER_MODEL = 'Ersathi.User'  
+
