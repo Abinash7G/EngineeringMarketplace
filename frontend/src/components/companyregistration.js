@@ -21,7 +21,7 @@ const CompanyRegistration = () => {
     companyEmail: "",
     companyRegistrationId: "",
     location: "",
-    servicesProvided: [],
+    servicesProvided: [], // Ensure it's an empty array initially
   });
 
   const [servicesOptions, setServicesOptions] = useState([]);
@@ -32,9 +32,14 @@ const CompanyRegistration = () => {
     const fetchServices = async () => {
       try {
         const response = await API.get("/api/services/"); // Replace with your actual API endpoint
-        setServicesOptions(response.data); // Assuming API returns an array of service objects
+        if (response.status === 200) {
+          setServicesOptions(response.data); // Assuming API returns an array of service objects
+        } else {
+          setServicesOptions([]);
+        }
       } catch (error) {
         console.error("Error fetching services:", error);
+        setServicesOptions([]); // Gracefully handle the error
       }
     };
     fetchServices();
@@ -44,7 +49,7 @@ const CompanyRegistration = () => {
     const { name, value, type, checked } = e.target;
 
     if (type === "checkbox") {
-      const serviceId = parseInt(value, 10);
+      const serviceId = parseInt(value, 10); // Ensure value is parsed as an integer
       setFormData((prevData) => ({
         ...prevData,
         servicesProvided: checked
@@ -66,10 +71,10 @@ const CompanyRegistration = () => {
 
     try {
       const response = await API.post("/api/signup/", formData); // Replace with your actual API endpoint
-      setMessage(response.data.message);
+      setMessage(response.data.message || "Registration successful!");
     } catch (error) {
       if (error.response && error.response.data) {
-        setMessage(error.response.data.error);
+        setMessage(error.response.data.error || "An error occurred.");
       } else {
         setMessage("Registration failed. Please try again.");
       }
@@ -97,21 +102,20 @@ const CompanyRegistration = () => {
       >
         {/* Company Type */}
         <FormControl fullWidth variant="outlined" required>
-  <InputLabel>Company Type</InputLabel>
-  <Select
-    name="companyType"
-    value={formData.companyType}
-    onChange={handleChange}
-    label="Company Type"
-  >
-    <MenuItem value="">
-      <em>Select Company Type</em>
-    </MenuItem>
-    <MenuItem value="construction">Construction Company</MenuItem>
-    <MenuItem value="supplier">Material Supplier</MenuItem>
-  </Select>
-</FormControl>
-
+          <InputLabel>Company Type</InputLabel>
+          <Select
+            name="companyType"
+            value={formData.companyType}
+            onChange={handleChange}
+            label="Company Type"
+          >
+            <MenuItem value="">
+              <em>Select Company Type</em>
+            </MenuItem>
+            <MenuItem value="construction">Construction Company</MenuItem>
+            <MenuItem value="supplier">Material Supplier</MenuItem>
+          </Select>
+        </FormControl>
 
         {/* Company Name */}
         <TextField
@@ -162,20 +166,26 @@ const CompanyRegistration = () => {
         {formData.companyType === "construction" && (
           <Box>
             <Typography variant="subtitle1">List of Services:</Typography>
-            {servicesOptions.map((service) => (
-              <FormControlLabel
-                key={service.id}
-                control={
-                  <Checkbox
-                    name="servicesProvided"
-                    value={service.id}
-                    checked={formData.servicesProvided.includes(service.id)}
-                    onChange={handleChange}
-                  />
-                }
-                label={service.name}
-              />
-            ))}
+            {servicesOptions.length > 0 ? (
+              servicesOptions.map((service) => (
+                <FormControlLabel
+                  key={service.id}
+                  control={
+                    <Checkbox
+                      name="servicesProvided"
+                      value={service.id}
+                      checked={formData.servicesProvided.includes(service.id)}
+                      onChange={handleChange}
+                    />
+                  }
+                  label={service.name}
+                />
+              ))
+            ) : (
+              <Typography variant="body2" color="textSecondary">
+                No services available.
+              </Typography>
+            )}
           </Box>
         )}
 
