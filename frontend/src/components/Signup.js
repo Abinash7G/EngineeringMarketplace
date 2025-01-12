@@ -110,7 +110,7 @@ const SignupPage = () => {
         <Link
           component="button"
           variant="body2"
-          onClick={() => navigate("/login")}
+          onClick={() => navigate("/login")} //navigation to login page
           sx={{ color: "#0073e6", textDecoration: "underline" }}
         >
           Log in

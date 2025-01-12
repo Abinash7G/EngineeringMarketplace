@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import {
   Container,
@@ -12,9 +13,12 @@ import {
   Checkbox,
   FormControlLabel,
   Button,
+  Link,
 } from "@mui/material";
 
 const CompanyRegistration = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     companyType: "",
     companyName: "",
@@ -27,23 +31,29 @@ const CompanyRegistration = () => {
   const [servicesOptions, setServicesOptions] = useState([]);
   const [message, setMessage] = useState("");
 
-  // Fetch services from backend
+  // Fetch services from backend when "Construction Company" is selected
   useEffect(() => {
     const fetchServices = async () => {
-      try {
-        const response = await API.get("/api/services/"); // Replace with your actual API endpoint
-        if (response.status === 200) {
-          setServicesOptions(response.data); // Assuming API returns an array of service objects
-        } else {
-          setServicesOptions([]);
+      if (formData.companyType === "construction") {
+        // Fetch services only for Construction Company
+        try {
+          const response = await API.get("/api/services/");
+          if (response.status === 200) {
+            setServicesOptions(response.data); // Update state with fetched services
+          } else {
+            setServicesOptions([]); // Reset state if no services are available
+          }
+        } catch (error) {
+          console.error("Error fetching services:", error);
+          setServicesOptions([]); // Reset state on error
         }
-      } catch (error) {
-        console.error("Error fetching services:", error);
-        setServicesOptions([]); // Gracefully handle the error
+      } else {
+        setServicesOptions([]); // Clear services for non-construction companies
       }
     };
+
     fetchServices();
-  }, []);
+  }, [formData.companyType]); // Dependency on companyType
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -64,16 +74,27 @@ const CompanyRegistration = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.companyType || !formData.companyName || !formData.companyEmail) {
+    // Map frontend keys to backend keys
+    const payload = {
+      company_type: formData.companyType,
+      company_name: formData.companyName,
+      company_email: formData.companyEmail,
+      company_registration_id: formData.companyRegistrationId,
+      location: formData.location,
+      services_provided: formData.servicesProvided, // Adjusted for snake_case
+    };
+
+    if (!payload.company_type || !payload.company_name || !payload.company_email) {
       setMessage("Please fill out all required fields.");
       return;
     }
 
     try {
-      const response = await API.post("/api/signup/", formData); // Replace with your actual API endpoint
+      const response = await API.post("/company-registration/", payload); // Updated payload
       setMessage(response.data.message || "Registration successful!");
     } catch (error) {
       if (error.response && error.response.data) {
+        console.error("Backend Error:", error.response.data); // Log backend error for debugging
         setMessage(error.response.data.error || "An error occurred.");
       } else {
         setMessage("Registration failed. Please try again.");
@@ -205,6 +226,18 @@ const CompanyRegistration = () => {
           {message}
         </Typography>
       )}
+
+      <Typography variant="body2" align="center" sx={{ mt: 2 }}>
+        Already have an account?{' '}
+        <Link
+          component="button"
+          variant="body2"
+          onClick={() => navigate("/login")}
+          sx={{ color: "#0073e6", textDecoration: "underline" }}
+        >
+          Log in
+        </Link>
+      </Typography>
     </Container>
   );
 };
