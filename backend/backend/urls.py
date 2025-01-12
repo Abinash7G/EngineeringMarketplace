@@ -20,6 +20,8 @@ from ersathi.views import ServiceList
 from ersathi.views import SignupView, LoginView
 from django.urls import path, include
 from ersathi.views import ForgotPasswordView
+from ersathi.views import CompanyRegistrationView, get_company_registrations, approve_company, reject_company
+from ersathi.views import ServiceList
 
 
 
@@ -31,6 +33,11 @@ urlpatterns = [
     path('auth/', include('social_django.urls', namespace='social')),
     path('api/forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
     path('password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
+    #company
+    path('company-registration/', CompanyRegistrationView.as_view(), name='company-registration'),
+    path('company-registration-list/', get_company_registrations, name='company-registration-list'),
+    path('approve-company/<int:pk>/', approve_company, name='approve-company'),
+    path('reject-company/<int:pk>/', reject_company, name='reject-company'),
     
 
 ]
