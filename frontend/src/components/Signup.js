@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useState } from "react"; 
+import { useNavigate } from "react-router-dom";
 import API from "../services/api";
-import { TextField, Button, Typography, Box, Container } from "@mui/material";
+import { TextField, Button, Typography, Box, Container, Link } from "@mui/material";
 
 const SignupPage = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -102,6 +105,17 @@ const SignupPage = () => {
           {message}
         </Typography>
       )}
+      <Typography variant="body2" align="center" sx={{ mt: 2 }}>
+        Already have an account?{' '}
+        <Link
+          component="button"
+          variant="body2"
+          onClick={() => navigate("/login")}
+          sx={{ color: "#0073e6", textDecoration: "underline" }}
+        >
+          Log in
+        </Link>
+      </Typography>
     </Container>
   );
 };
