@@ -8,7 +8,7 @@ const Home = () => {
 
   useEffect(() => {
     // Make a request to the API to get a message
-    API.get("/hello/")
+    API.get("/api/services/")
       .then((response) => setMessage(response.data.message))
       .catch((error) => console.error(error));
   }, []);

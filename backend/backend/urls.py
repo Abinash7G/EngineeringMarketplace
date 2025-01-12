@@ -16,9 +16,28 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from ersathi.views import ServiceList
+from ersathi.views import SignupView, LoginView
 from django.urls import path, include
+from ersathi.views import ForgotPasswordView
+from ersathi.views import CompanyRegistrationView, get_company_registrations, approve_company, reject_company
+from ersathi.views import ServiceList
+
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('marketplace.urls')),
+    path('api/services/', ServiceList.as_view(), name='service-list'),
+    path('api/signup/', SignupView.as_view(), name='signup'),
+    path('api/login/', LoginView.as_view(), name='login'),
+    path('auth/', include('social_django.urls', namespace='social')),
+    path('api/forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
+    #company
+    path('company-registration/', CompanyRegistrationView.as_view(), name='company-registration'),
+    path('company-registration-list/', get_company_registrations, name='company-registration-list'),
+    path('approve-company/<int:pk>/', approve_company, name='approve-company'),
+    path('reject-company/<int:pk>/', reject_company, name='reject-company'),
+    
+
 ]
