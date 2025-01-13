@@ -6,6 +6,7 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import CompanyRegistration from './components/companyregistration';
 import AdminDashboard from './pages/AdminDashboard';
+import EmailConfirmation from "./components/EmailConfirmation";
 
 const App = () => {
   const location = useLocation(); // Correct hook name
@@ -20,6 +21,7 @@ const App = () => {
         <Route path="/signup" element={<Signup />} />
         <Route path="/companyregistration" element={<CompanyRegistration />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/confirm-email/:token" element={<EmailConfirmation />} />
       </Routes>
     </>
   );
