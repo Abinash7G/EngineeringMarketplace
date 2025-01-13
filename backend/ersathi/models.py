@@ -1,11 +1,17 @@
 from django.db import models
+import uuid
 
 # Create your models here.
 from django.contrib.auth.models import AbstractUser
 class CustomUser(AbstractUser):
     contact_number = models.CharField(max_length=15, blank=True, null=True)
     role = models.CharField(max_length=20, default="Client")
-
+    is_verified = models.BooleanField(default=False)  # field to track email verification
+    
+class EmailConfirmationToken(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='email_token')
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 
