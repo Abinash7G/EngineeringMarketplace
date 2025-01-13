@@ -16,6 +16,12 @@ from rest_framework.decorators import api_view
 from .models import Service  # Import your Service model
 from .serializers import ServiceSerializer
 
+from django.core.mail import send_mail
+from django.conf import settings
+from .models import EmailConfirmationToken
+
+from django.shortcuts import get_object_or_404
+
 
 class ServiceList(APIView):
     def get(self, request):
@@ -31,24 +37,51 @@ class SignupView(APIView):
     def post(self, request):
         data = request.data
 
-        # Check for existing username and email
         if CustomUser.objects.filter(username=data.get('username')).exists():
             return Response({'error': 'Username already taken'}, status=status.HTTP_400_BAD_REQUEST)
         if CustomUser.objects.filter(email=data.get('email')).exists():
             return Response({'error': 'Email already in use'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create a new CustomUser
         user = CustomUser.objects.create_user(
             username=data.get('username'),
             email=data.get('email'),
             password=data.get('password'),
-            contact_number=data.get('contactNumber'),  # Add contact_number from request
-            role=data.get('role', 'Client')  # Use default role if not provided
+            contact_number=data.get('contactNumber'),
+            role=data.get('role', 'Client')
         )
+        user.is_active = False  # Disable login until email is verified
         user.save()
 
-        return Response({'message': 'Signup successful'}, status=status.HTTP_201_CREATED) #message that shown after signup
-    
+        # Generate and save token
+        token = EmailConfirmationToken.objects.create(user=user)
+
+        # Send confirmation email
+        confirmation_link = f"http://localhost:3001/confirm-email/{token.token}"
+        send_mail(
+            subject="Email Confirmation",
+            message=f"Hi {user.username},\n\nPlease confirm your email by clicking the link below:\n{confirmation_link}",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+        )
+
+        return Response({'message': 'Signup successful! Check your email to confirm your account.'}, status=status.HTTP_201_CREATED)
+
+#email confirmation endpoint
+class ConfirmEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        confirmation_token = get_object_or_404(EmailConfirmationToken, token=token)
+        user = confirmation_token.user
+        user.is_active = True
+        user.is_verified = True
+        user.save()
+        confirmation_token.delete()  # Remove the token after use
+        return Response({'message': 'Email successfully confirmed!'}, status=status.HTTP_200_OK)
+
+
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
