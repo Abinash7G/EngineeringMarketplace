@@ -72,35 +72,55 @@ class ConfirmEmailView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, token):
-        print(f"Received token: {token}")  # Debugging
         try:
-            # Retrieve the token from the database
+            # First check if the user is already verified
+            user = CustomUser.objects.filter(email_token__token=token).first()
+            if user and user.is_verified:
+                return Response({
+                    'message': 'Your email has already been verified. You can now login.',
+                    'status': 'already_verified'
+                }, status=status.HTTP_200_OK)
+
+            # Verify the token
             confirmation_token = EmailConfirmationToken.objects.get(token=token)
-            print(f"Found token: {confirmation_token.token} for user: {confirmation_token.user}")  # Debugging
-
-            # Check if the token has expired
-            if confirmation_token.created_at < now() - timedelta(days=1):  # Token valid for 24 hours
-                return Response({'error': 'Token has expired. Please sign up again or request a new confirmation email.'},
-                                status=status.HTTP_400_BAD_REQUEST)
-
-            # Retrieve the associated user
             user = confirmation_token.user
-            if user.is_verified:  # Check if the user is already confirmed
-                return Response({'message': 'Your email is already confirmed.'}, status=status.HTTP_200_OK)
 
-            # Mark the user as verified and active
+            # Confirm the user
             user.is_active = True
             user.is_verified = True
             user.save()
 
-            # Delete the token after successful confirmation
-            confirmation_token.delete()
+            # Send success response before deleting the token
+            response = Response({
+                'message': 'Email successfully confirmed! You can now login.',
+                'status': 'verified'
+            }, status=status.HTTP_200_OK)
 
-            return Response({'message': 'Email successfully confirmed!'}, status=status.HTTP_200_OK)
+            # Delete the token after sending the response
+            #confirmation_token.delete()
+            return response
 
         except EmailConfirmationToken.DoesNotExist:
-            print("Token does not exist.")  # Debugging
-            return Response({'error': 'Invalid or expired toen.'}, status=status.HTTP_400_BAD_REQUEST)
+            # Check if the user is already verified
+            user = CustomUser.objects.filter(is_verified=True).filter(email_token__token=token).first()
+            if user:
+                return Response({
+                    'message': 'Your email has already been verified. You can now login.',
+                    'status': 'already_verified'
+                }, status=status.HTTP_200_OK)
+            return Response({
+                'error': 'Invalid or expired token.',
+                'status': 'invalid_token'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            print(f"Unexpected error: {str(e)}")  # Log the error
+            return Response({
+                'error': 'An unexpected error occurred.',
+                'status': 'error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        
 
 
 
