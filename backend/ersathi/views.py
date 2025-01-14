@@ -19,8 +19,9 @@ from .serializers import ServiceSerializer
 from django.core.mail import send_mail
 from django.conf import settings
 from .models import EmailConfirmationToken
-
 from django.shortcuts import get_object_or_404
+from datetime import timedelta
+from django.utils.timezone import now
 
 
 class ServiceList(APIView):
@@ -71,17 +72,39 @@ class ConfirmEmailView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, token):
-        confirmation_token = get_object_or_404(EmailConfirmationToken, token=token)
-        user = confirmation_token.user
-        user.is_active = True
-        user.is_verified = True
-        user.save()
-        confirmation_token.delete()  # Remove the token after use
-        return Response({'message': 'Email successfully confirmed!'}, status=status.HTTP_200_OK)
+        print(f"Received token: {token}")  # Debugging
+        try:
+            # Retrieve the token from the database
+            confirmation_token = EmailConfirmationToken.objects.get(token=token)
+            print(f"Found token: {confirmation_token.token} for user: {confirmation_token.user}")  # Debugging
+
+            # Check if the token has expired
+            if confirmation_token.created_at < now() - timedelta(days=1):  # Token valid for 24 hours
+                return Response({'error': 'Token has expired. Please sign up again or request a new confirmation email.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            # Retrieve the associated user
+            user = confirmation_token.user
+            if user.is_verified:  # Check if the user is already confirmed
+                return Response({'message': 'Your email is already confirmed.'}, status=status.HTTP_200_OK)
+
+            # Mark the user as verified and active
+            user.is_active = True
+            user.is_verified = True
+            user.save()
+
+            # Delete the token after successful confirmation
+            confirmation_token.delete()
+
+            return Response({'message': 'Email successfully confirmed!'}, status=status.HTTP_200_OK)
+
+        except EmailConfirmationToken.DoesNotExist:
+            print("Token does not exist.")  # Debugging
+            return Response({'error': 'Invalid or expired toen.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
-
+#LOGIN LOGIC
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -91,10 +114,11 @@ class LoginView(APIView):
 
         user = authenticate(username=username, password=password)
         if user:
-            # Generate tokens (if using JWT or session-based auth)
+            if not user.is_verified:
+                return Response({'error': 'Please confirm your email before logging in.'}, status=status.HTTP_403_FORBIDDEN)
             return Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
         else:
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Invalid credentials. Please try again.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class ForgotPasswordView(APIView):
