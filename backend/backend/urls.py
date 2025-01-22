@@ -20,7 +20,7 @@ from ersathi.views import ServiceList
 from ersathi.views import SignupView, LoginView
 from django.urls import path, include
 from ersathi.views import ForgotPasswordView
-from ersathi.views import CompanyRegistrationView, get_company_registrations, approve_company, reject_company
+from ersathi.views import CompanyRegistrationView, get_company_registrations, approve_company, reject_company,get_company_details
 from ersathi.views import ServiceList
 from ersathi.views import ConfirmEmailView
 
@@ -40,5 +40,5 @@ urlpatterns = [
     path('approve-company/<int:pk>/', approve_company, name='approve-company'),
     path('reject-company/<int:pk>/', reject_company, name='reject-company'),
      path('api/confirm-email/<str:token>/', ConfirmEmailView.as_view(), name='confirm-email'),
-
+     path('company-registration/<int:pk>/', get_company_details, name='company-details'),     
 ]
