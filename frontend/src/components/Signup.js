@@ -10,7 +10,7 @@ const SignupPage = () => {
     username: "",
     email: "",
     password: "",
-    contactNumber: "",
+    phoneNumber: "",
     role: "Client",
   });
 
@@ -23,8 +23,16 @@ const SignupPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log(formData);
       const response = await API.post("api/signup/", formData);
       setMessage(response.data.message);
+      setFormData({
+        username: "",
+        email: "",
+        password: "",
+        phoneNumber: "",
+        role: "User",
+      },1000); // Clear form data
     } catch (error) {
       if (error.response && error.response.data) {
         setMessage(error.response.data.error);

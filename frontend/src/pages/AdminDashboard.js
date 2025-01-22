@@ -1,7 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";  
+import API from "../services/api";
 import { FaUsers, FaTools, FaChartBar, FaBuilding } from "react-icons/fa";
 import Sidebar from "../components/Sidebar";
 import Chart from "../components/Chart";
+import { useNavigate } from "react-router-dom";
+import ViewCompanyDetails from "../components/ViewCompanyDetails";
+
 import {
   Box,
   Typography,
@@ -16,45 +20,76 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 
 const AdminDashboard = () => {
-  const [companies, setCompanies] = useState([
-    {
-      id: 1,
-      name: "ABC Construction",
-      email: "contact@abcconstruction.com",
-      role: "Construction Company",
-      subscription: "Monthly",
-      safetyTraining: true,
-      feedback: "Excellent service but needs faster response time.",
-    },
-    {
-      id: 2,
-      name: "XYZ Supplies",
-      email: "sales@xyzsupplies.com",
-      role: "Material Supplier",
-      subscription: "Quarterly",
-      safetyTraining: false,
-      feedback: "Reliable but room for improvement in material quality.",
-    },
-  ]);
+  const navigate = useNavigate();
+  // State variables for companies and safety training companies.
+  const [companies, setCompanies] = useState([]); // Unapproved companies
+  const [safetyCompanies, setSafetyCompanies] = useState([]); // Approved companies with Safety Training
+  const [selectedCompany, setSelectedCompany] = useState(null); // Details for dialog
+  const [openDialog, setOpenDialog] = useState(false); // Dialog open state
 
-  const approveCompany = (id) => {
-    alert(`Approved company with ID: ${id}`);
-    setCompanies(companies.filter((company) => company.id !== id));
+  // Fetch all companies when the component mounts.
+  useEffect(() => {
+    API.get("/company-registration-list/")
+      .then((response) => {
+        const allCompanies = response.data;
+
+        // Filter out unapproved companies.
+        const unapprovedCompanies = allCompanies.filter(
+          (company) => !company.is_approved
+        );
+
+        // Filter approved companies that include Safety Training module (assumed id = 5).
+        const filteredSafetyCompanies = allCompanies.filter(
+          (company) =>
+            company.is_approved && company.services_provided.includes(5)
+        );
+
+        setCompanies(unapprovedCompanies);
+        setSafetyCompanies(filteredSafetyCompanies);
+      })
+      .catch((error) => console.error("Error fetching companies:", error));
+  }, []);
+
+  // Close the details dialog.
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setSelectedCompany(null);
   };
 
+  // Approve a company.
+  const approveCompany = (id) => {
+    API.post(`/approve-company/${id}/`)
+      .then(() => {
+        // Remove the company from the unapproved list.
+        setCompanies(companies.filter((company) => company.id !== id));
+        alert(`Company with ID: ${id} approved successfully!`);
+      })
+      .catch((error) => console.error("Error approving company:", error));
+  };
+
+  // Reject a company.
   const rejectCompany = (id) => {
-    alert(`Rejected company with ID: ${id}`);
-    setCompanies(companies.filter((company) => company.id !== id));
+    API.post(`/reject-company/${id}/`)
+      .then(() => {
+        // Remove the company from the unapproved list.
+        setCompanies(companies.filter((company) => company.id !== id));
+        alert(`Company with ID: ${id} rejected successfully!`);
+      })
+      .catch((error) => console.error("Error rejecting company:", error));
   };
 
   return (
     <Box
       sx={{
-        display: "flex", // Flex layout to align sidebar and main content
-        height: "100vh", // Full viewport height
+        display: "flex",
+        height: "100vh",
         backgroundColor: "#f9f9f9",
       }}
     >
@@ -64,8 +99,8 @@ const AdminDashboard = () => {
       {/* Main Content */}
       <Box
         sx={{
-          flex: 1, // Main content takes the remaining space
-          overflowY: "auto", // Scrollable main content
+          flex: 1,
+          overflowY: "auto",
           padding: "20px",
         }}
       >
@@ -103,11 +138,9 @@ const AdminDashboard = () => {
           <Chart />
         </Box>
 
-        {/* Company Management */}
+        {/* Company Management Table */}
         <Box sx={{ marginBottom: "20px" }}>
-          <Typography variant="h5" sx={{ marginBottom: "10px" }}>
-            Company Management
-          </Typography>
+          <Typography variant="h5">Company Management</Typography>
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
@@ -115,8 +148,6 @@ const AdminDashboard = () => {
                   <TableCell>ID</TableCell>
                   <TableCell>Name</TableCell>
                   <TableCell>Email</TableCell>
-                  <TableCell>Role</TableCell>
-                  <TableCell>Subscription</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -124,36 +155,31 @@ const AdminDashboard = () => {
                 {companies.map((company) => (
                   <TableRow key={company.id}>
                     <TableCell>{company.id}</TableCell>
-                    <TableCell>{company.name}</TableCell>
-                    <TableCell>{company.email}</TableCell>
-                    <TableCell>{company.role}</TableCell>
-                    <TableCell>{company.subscription}</TableCell>
+                    <TableCell>{company.company_name}</TableCell>
+                    <TableCell>{company.company_email}</TableCell>
                     <TableCell>
                       <Button
                         variant="contained"
+                        color="info"
+                        onClick={() => navigate(`/view-company-details/${company.id}`)}
+                        sx={{ marginRight: "10px" }}
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        variant="contained"
                         color="success"
-                        size="small"
-                        sx={{ marginRight: "5px" }}
                         onClick={() => approveCompany(company.id)}
+                        sx={{ marginRight: "10px" }}
                       >
                         Approve
                       </Button>
                       <Button
                         variant="contained"
                         color="error"
-                        size="small"
-                        sx={{ marginRight: "5px" }}
                         onClick={() => rejectCompany(company.id)}
                       >
                         Reject
-                      </Button>
-                      <Button
-                        variant="contained"
-                        color="info"
-                        size="small"
-                        onClick={() => alert(`Viewing details for ${company.name}`)}
-                      >
-                        View Details
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -163,7 +189,7 @@ const AdminDashboard = () => {
           </TableContainer>
         </Box>
 
-        {/* Safety Training */}
+        {/* Safety Training Requests Table */}
         <Box sx={{ marginBottom: "20px" }}>
           <Typography variant="h5">Safety Training Requests</Typography>
           <TableContainer component={Paper}>
@@ -176,29 +202,29 @@ const AdminDashboard = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {companies
-                  .filter((company) => company.safetyTraining)
-                  .map((company) => (
-                    <TableRow key={company.id}>
-                      <TableCell>{company.id}</TableCell>
-                      <TableCell>{company.name}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={() => alert(`Requested training for ${company.name}`)}
-                        >
-                          Request Training
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                {safetyCompanies.map((company) => (
+                  <TableRow key={company.id}>
+                    <TableCell>{company.id}</TableCell>
+                    <TableCell>{company.company_name}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() =>
+                          alert(`Requested training for ${company.company_name}`)
+                        }
+                      >
+                        Request Training
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </TableContainer>
         </Box>
 
-        {/* Feedback and Disputes */}
+        {/* Feedback and Disputes Section */}
         <Box sx={{ marginBottom: "20px" }}>
           <Typography variant="h5">Feedback & Disputes</Typography>
           {companies.map((company) => (
@@ -212,20 +238,57 @@ const AdminDashboard = () => {
                 marginBottom: "10px",
               }}
             >
-              <Typography variant="h6">{company.name}</Typography>
-              <Typography variant="body1">{company.feedback}</Typography>
-              <Button
-                variant="contained"
-                color="warning"
-                sx={{ marginTop: "10px" }}
-                onClick={() => alert(`Resolved issue for ${company.name}`)}
-              >
-                Resolve Dispute
-              </Button>
+              <Typography variant="h6">{company.company_name}</Typography>
+              <Typography variant="body1">No disputes reported.</Typography>
             </Box>
           ))}
         </Box>
       </Box>
+
+      {/* Company Details Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Company Registration Details</DialogTitle>
+        <DialogContent>
+          {selectedCompany ? (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="body1">
+                <strong>Name:</strong> {selectedCompany.company_name}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Email:</strong> {selectedCompany.company_email}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Location:</strong> {selectedCompany.location}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Registration ID:</strong> {selectedCompany.company_registration_id}
+              </Typography>
+              {selectedCompany.registration_date && (
+                <Typography variant="body1">
+                  <strong>Registration Date:</strong> {selectedCompany.registration_date}
+                </Typography>
+              )}
+              {selectedCompany.registration_status && (
+                <Typography variant="body1">
+                  <strong>Status:</strong> {selectedCompany.registration_status}
+                </Typography>
+              )}
+              <Typography variant="body1">
+                <strong>Services Provided:</strong>{" "}
+                {selectedCompany.services_provided.join(", ")}
+              </Typography>
+              {/* Add any additional registration details here */}
+            </Box>
+          ) : (
+            <Typography variant="body1">No details available.</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color="secondary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
