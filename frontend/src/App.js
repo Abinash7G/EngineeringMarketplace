@@ -7,21 +7,27 @@ import Signup from './components/Signup';
 import CompanyRegistration from './components/companyregistration';
 import AdminDashboard from './pages/AdminDashboard';
 import EmailConfirmation from "./components/EmailConfirmation";
-
+import ViewCompanyDetails from "./components/ViewCompanyDetails";
+import CompanyDashboard from './pages/CompanyDashboard';
+import ClientDashboard from './pages/ClientDashboard';
 const App = () => {
   const location = useLocation(); // Correct hook name
-  const navbarRoutes = ["/", "/login", "/signup", "/companyregistration"];
+  const navbarRoutes = ["/","/home", "/login", "/signup", "/companyregistration"];
 
   return (
     <>
       {navbarRoutes.includes(location.pathname) && <Navbar />}
       <Routes>
-        <Route path="/" element={<Home />} />
+      <Route path="/" element={<Home />} />
+        
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/companyregistration" element={<CompanyRegistration />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/confirm-email/:token" element={<EmailConfirmation />} />
+        <Route path="/view-company-details/:id" element={<ViewCompanyDetails />} />
+        <Route path="/company" element={<CompanyDashboard />} />
+        <Route path="/client" element={<ClientDashboard />} />
       </Routes>
     </>
   );

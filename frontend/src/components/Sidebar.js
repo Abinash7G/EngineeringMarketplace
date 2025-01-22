@@ -1,12 +1,15 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
 import { FaUsers, FaTools, FaChartBar, FaCog, FaSignOutAlt } from "react-icons/fa";
 import { Box, Typography, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Button } from "@mui/material";
 
 const Sidebar = () => {
+  const navigate = useNavigate(); // Initialize navigate
+
   const handleLogout = () => {
+    localStorage.removeItem('authToken');
     alert("You have been logged out!");
-    // Add actual logout logic here (e.g., clearing tokens, redirecting, etc.)
+    navigate("/"); // navagiting to home page
   };
 
   return (
