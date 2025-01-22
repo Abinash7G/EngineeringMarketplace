@@ -1,25 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
-import API from "../services/api";
-import { FaGoogle } from "react-icons/fa"; // Import Google icon from react-icons
-import {
-  TextField,
-  Button,
-  Typography,
-  Box,
-  Container,
-} from "@mui/material";
+import API from "../services/api"; // Axios instance
+import { FaGoogle } from "react-icons/fa"; // Google icon
+import { TextField, Button, Typography, Box, Container } from "@mui/material";
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ username: "", password: "" });
   const [email, setEmail] = useState(""); // For forgot password
   const [message, setMessage] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false); // Toggle forgot password view
 
-  const navigate = useNavigate(); // Initialize navigate hook
+  const navigate = useNavigate(); // Hook for navigation
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,29 +19,27 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage(""); // Clear any existing messages
-    try {
-      const response = await API.post("/api/login/", formData);
-      if (response.status === 200) {
-        localStorage.setItem("access_token", response.data.access);
-        localStorage.setItem("refresh_token", response.data.refresh);
-        setMessage("Login successful!");
-      } else {
-        setMessage("Unexpected response from the server. Please try again.");
-      }
-    } catch (error) {
-      if (error.response) {
-        setMessage(
-          error.response.data.message || "Invalid credentials. Please try again."
-        );
-      } else if (error.request) {
-        setMessage("No response from the server. Please try again later.");
-      } else {
-        setMessage("An error occurred. Please try again.");
-      }
-    }
-  };
+    setMessage(""); 
 
+    try {
+        const response = await API.post("/api/login/", formData);
+        if (response.status === 200) {
+            const { access, role } = response.data;
+            localStorage.setItem("access_token", access);
+
+            // Redirect based on role
+            if (role === "Platformadmin") navigate("/admin");
+            else if (role === "Admin") navigate("/company"); //company dashboard
+            else navigate("/client");
+        }
+    } catch (error) {
+        if (error.response) {
+            setMessage(error.response.data.message || "Invalid credentials.");
+        } else {
+            setMessage("An error occurred. Please try again.");
+        }
+    }
+};
   const handleGoogleLogin = () => {
     window.location.href = "http://127.0.0.1:8000/auth/login/google-oauth2/";
   };
@@ -169,7 +158,7 @@ const Login = () => {
       <Typography variant="body2" align="center" sx={{ mt: 2 }}>
         Don’t have an account?{" "}
         <span
-          onClick={() => navigate("/signup")} // Navigate to Signup page
+          onClick={() => navigate("/signup")}
           style={{ fontWeight: "bold", cursor: "pointer", color: "#0073e6" }}
         >
           Create one
@@ -180,7 +169,7 @@ const Login = () => {
         <Typography
           variant="body1"
           align="center"
-          sx={{ mt: 2, color: "error.main" }}
+          sx={{ mt: 2, color: message.includes("successful") ? "green" : "error.main" }}
         >
           {message}
         </Typography>

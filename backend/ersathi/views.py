@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Group
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -9,12 +10,56 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 
-from .models import CompanyRegistration
+
+from .models import Company
 from .serializers import CompanyRegistrationSerializer
 from rest_framework.decorators import api_view
 
 from .models import Service  # Import your Service model
 from .serializers import ServiceSerializer
+
+from django.core.mail import send_mail
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from datetime import timedelta
+from django.utils.timezone import now
+
+
+from rest_framework.decorators import api_view
+
+from itsdangerous import URLSafeTimedSerializer
+
+# Configure a secret key (use a strong, unique key)
+SECRET_KEY = "2e14a6352c97c2fe33315af6804d89d474432d4d5835326005d55695fd8a4274"
+SALT = "c3d00104b56828f98d4592e81dba0ece"
+
+def generate_verification_token(email):
+    """
+    Generate a token for email verification.
+    """
+    serializer = URLSafeTimedSerializer(SECRET_KEY)
+    return serializer.dumps(email, salt=SALT)
+
+def verify_verification_token(token, expiration=3600):
+    """
+    Verify the token and return the email if valid.
+    :param token: The token to verify.
+    :param expiration: Expiry time in seconds.
+    """
+    serializer = URLSafeTimedSerializer(SECRET_KEY)
+    try:
+        email = serializer.loads(token, salt=SALT, max_age=expiration)
+        return email
+    except Exception as e:
+        return None  # Token is invalid or expired
+
+
+
+
+
+
+
+
 
 
 class ServiceList(APIView):
@@ -31,39 +76,98 @@ class SignupView(APIView):
     def post(self, request):
         data = request.data
 
-        # Check for existing username and email
         if CustomUser.objects.filter(username=data.get('username')).exists():
             return Response({'error': 'Username already taken'}, status=status.HTTP_400_BAD_REQUEST)
         if CustomUser.objects.filter(email=data.get('email')).exists():
             return Response({'error': 'Email already in use'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create a new CustomUser
         user = CustomUser.objects.create_user(
             username=data.get('username'),
             email=data.get('email'),
             password=data.get('password'),
-            contact_number=data.get('contactNumber'),  # Add contact_number from request
-            role=data.get('role', 'Client')  # Use default role if not provided
+            phone_number=data.get('phoneNumber'),
         )
+        user.is_active = False  # Disable login until email is verified
         user.save()
 
-        return Response({'message': 'Signup successful'}, status=status.HTTP_201_CREATED) #message that shown after signup
-    
-class LoginView(APIView):
+        
+
+        # Send confirmation email
+        confirmation_link = f"http://localhost:3001/confirm-email/{generate_verification_token(email=user.email)}"
+        send_mail(
+            subject="Email Confirmation",
+            message=f"Hi {user.username},\n\nPlease confirm your email by clicking the link below:\n{confirmation_link}",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+        )
+
+        return Response({'message': 'Signup successful! Check your email to confirm your account.'}, status=status.HTTP_201_CREATED)
+
+#email confirmation endpoint
+class ConfirmEmailView(APIView):
     permission_classes = [AllowAny]
 
-    def post(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password')
+    def get(self, request, token):
+            # First check if the user is already verified
+            email = verify_verification_token(token)
+            if not email: 
+                return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+            user = CustomUser.objects.filter(email=email).first()
+            if user and user.is_verified:
+                return Response({
+                    'message': 'Your email has already been verified. You can now login.',
+                    'status': 'already_verified'
+                }, status=status.HTTP_200_OK)
 
+            # Confirm the user
+            user.is_active = True
+            user.is_verified = True
+            # Check if the group "Platformadmin" exists
+            group, created = Group.objects.get_or_create(name='User')
+            # Add the user to the group
+            user.groups.add(group)
+            user.save()
+
+            
+
+            # Send success response before deleting the token
+            response = Response({
+                'message': 'Email successfully confirmed! You can now login.',
+                'status': 'verified'
+            }, status=status.HTTP_200_OK)
+
+            # Delete the token after sending the response
+            #confirmation_token.delete()
+            return response
+        
+
+
+
+#LOGIN LOGIC
+class LoginView(APIView):
+    def post(self, request, *args, **kwargs):
+        username = request.data.get("username")
+        password = request.data.get("password")
         user = authenticate(username=username, password=password)
+        
         if user:
-            # Generate tokens (if using JWT or session-based auth)
-            return Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+            groups = user.groups.first()
+               
 
+            
+            # Generate tokens
+            from rest_framework_simplejwt.tokens import RefreshToken
+            refresh = RefreshToken.for_user(user)
 
+            return Response({
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "role": groups.name if groups else None,
+            }, status=status.HTTP_200_OK)
+        
+        return Response({"message": "Invalid username or password."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        
 class ForgotPasswordView(APIView):
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')  # Extract the email from the request
@@ -91,34 +195,125 @@ class CompanyRegistrationView(APIView):
 
 @api_view(['GET'])
 def get_company_registrations(request):
-    companies = CompanyRegistration.objects.all()  # Fetch all companies from the database
+    companies = Company.objects.all()  # Fetch all companies from the database
     serializer = CompanyRegistrationSerializer(companies, many=True)  # Serialize the data
     return Response(serializer.data)  # Send the data as a response
 
+# Function to generate username and password
+def generate_credentials(company_name):
+    random_digits = get_random_string(length=4, allowed_chars='0123456789')
+    username = ''.join(e for e in company_name if e.isalnum())[:8] + random_digits
+    password = get_random_string(length=12)
+    return username.lower(), password
+
+from django.contrib.auth.hashers import make_password  # Import for password hashing
+
+
+#function to send comany user/password
 @api_view(['POST'])
 def approve_company(request, pk):
     try:
-        company = CompanyRegistration.objects.get(pk=pk)  # Get the company by its ID
-        company.is_approved = True  # Mark as approved
-        company.is_rejected = False  # Ensure not rejected
-        company.save()  # Save the changes
-        return Response({'message': 'Company approved successfully!'}, status=status.HTTP_200_OK)
-    except CompanyRegistration.DoesNotExist:
-        return Response({'error': 'Company not found'}, status=status.HTTP_404_NOT_FOUND)
-    
+        company = Company.objects.get(pk=pk)  # Fetch the company using the primary key
+        if company.is_approved:
+            return Response({'message': 'Company is already approved!'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Generate username and password
+        username, password = generate_credentials(company.company_name)
+
+        # Save the credentials and mark the company as approved
+        company.is_approved = True
+        company.is_rejected = False
+        #company.username = username
+        #company.password = make_password(password)  # Save hashed password
+        company.save()
+        User = get_user_model()
+        user = User.objects.create_user(username=username, email=f"{username}@yopmail.com")
+        user.set_password(password)
+        user.is_verified = True
+        user.company = company
+        user.save()
+        
+
+        # Check if the group "admin" exists
+        group, created = Group.objects.get_or_create(name='Admin')
+
+        # Add the user to the group
+        user.groups.add(group)
+        user.save()
+
+
+        # Send email to the company with credentials
+        send_mail(
+            subject="Your Company Login Credentials",
+            message=f"""
+            Dear {company.company_name},
+
+            Your company has been approved. Below are your login credentials:
+
+            Username: {username}
+            Password: {password}
+
+            Please log in and change your password immediately.
+
+            Regards,
+            Admin Team
+            """,
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[company.company_email],
+        )
+
+        return Response({'message': 'Company approved successfully!', 'username': username}, status=status.HTTP_200_OK)
+
+    except Company.DoesNotExist:
+        return Response({'error': 'Company not found'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
 def reject_company(request, pk):
     try:
-        company = CompanyRegistration.objects.get(pk=pk)  # Get the company by its ID
-        company.is_approved = False  # Mark as not approved
-        company.is_rejected = True  # Mark as rejected
-        company.save()  # Save the changes
+        company = Company.objects.get(pk=pk)
+        if company.is_rejected:
+            return Response({'message': 'Company is  rejected!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark as rejected
+        company.is_approved = False
+        company.is_rejected = True
+        company.save()
+
+        # Send rejection email
+        send_mail(
+            subject="Company Registration Rejected",
+            message=f"""
+            Dear {company.company_name},
+
+            We regret to inform you that your company registration has been rejected. If you have any questions, feel free to contact us.
+
+            Regards,
+            Admin Team
+            """,
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[company.company_email],
+        )
+
         return Response({'message': 'Company rejected successfully!'}, status=status.HTTP_200_OK)
-    except CompanyRegistration.DoesNotExist:
+
+    except Company.DoesNotExist:
         return Response({'error': 'Company not found'}, status=status.HTTP_404_NOT_FOUND)
-    
+
+
+@api_view(['GET'])
+def get_company_details(request, pk):
+    try:
+        # Fetch the company details using the primary key (id)
+        company = Company.objects.get(pk=pk)
+        serializer = CompanyRegistrationSerializer(company)  # Serialize the company object
+        return Response(serializer.data, status=200)  # Return serialized data
+    except Company.DoesNotExist:
+        return Response({'error': 'Company not found'}, status=404)  # Handle company not found
+
+
+
+
+
 
 class ServiceList(APIView):
     def get(self, request):
