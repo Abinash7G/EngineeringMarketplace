@@ -10,6 +10,7 @@ import EmailConfirmation from "./components/EmailConfirmation";
 import ViewCompanyDetails from "./components/ViewCompanyDetails";
 import CompanyDashboard from './pages/CompanyDashboard';
 import ClientDashboard from './pages/ClientDashboard';
+import RestPasswordView from './pages/RestPassswordView';
 const App = () => {
   const location = useLocation(); // Correct hook name
   const navbarRoutes = ["/","/home", "/login", "/signup", "/companyregistration"];
@@ -28,6 +29,8 @@ const App = () => {
         <Route path="/view-company-details/:id" element={<ViewCompanyDetails />} />
         <Route path="/company" element={<CompanyDashboard />} />
         <Route path="/client" element={<ClientDashboard />} />
+        <Route path="/restpasswordview/:token" element={<RestPasswordView/>} />
+
       </Routes>
     </>
   );
