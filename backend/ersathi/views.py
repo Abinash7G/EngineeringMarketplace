@@ -1,3 +1,4 @@
+import token
 from django.contrib.auth.models import Group
 from django.shortcuts import render
 from rest_framework.views import APIView
@@ -177,10 +178,47 @@ class ForgotPasswordView(APIView):
             user = User.objects.get(email=email)  # Get the user by email
         except User.DoesNotExist:
             return Response({"error": "User with this email does not exist."}, status=400)
+        
+        reset_url = f"http://localhost:3001/restpasswordview/{generate_verification_token(email=user.email)}/"
 
+        send_mail(
+                subject="Password Reset Request",
+                message=f"Click the link below to reset your password://\n{reset_url}",
+                from_email="noreply@yourdomain.com",  # Replace with your sender email
+                recipient_list=[email],
+                fail_silently=False,
+            )
         # Logic for sending the password reset email goes here
         return Response({"success": "Password reset email sent successfully."}, status=200)
+        
     
+class ResetPasswordView(APIView):
+    def post(self, request, token, *args, **kwargs):
+        email = verify_verification_token(token)
+        if not email: 
+            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+        password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
+        if password != confirm_password:
+            return Response({'error': 'Passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
+        print(password)
+
+        User = get_user_model()
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"error": "User with this email does not exist."}, status=400)
+        print(user.email)
+        user.set_password(password)
+        user.save()
+        return Response({"success": "Password reset Sucessfull."}, status=200)
+    
+    
+        
+        
+
+
+
 
 
 class CompanyRegistrationView(APIView):
