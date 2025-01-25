@@ -26,6 +26,7 @@ const Login = () => {
         if (response.status === 200) {
             const { access, role } = response.data;
             localStorage.setItem("access_token", access);
+            
 
             // Redirect based on role
             if (role === "Platformadmin") navigate("/admin");
