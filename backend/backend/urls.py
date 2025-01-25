@@ -16,14 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from ersathi.views import ServiceList
+from ersathi.views import ServiceList, get_user_profile
 from ersathi.views import SignupView, LoginView
 from django.urls import path, include
 from ersathi.views import ForgotPasswordView
 from ersathi.views import CompanyRegistrationView, get_company_registrations, approve_company, reject_company,get_company_details
 from ersathi.views import ServiceList
 from ersathi.views import ConfirmEmailView , ResetPasswordView
-
+from ersathi.views import change_password
 
 
 
@@ -41,6 +41,8 @@ urlpatterns = [
     path('company-registration-list/', get_company_registrations, name='company-registration-list'),
     path('approve-company/<int:pk>/', approve_company, name='approve-company'),
     path('reject-company/<int:pk>/', reject_company, name='reject-company'),
-     path('api/confirm-email/<str:token>/', ConfirmEmailView.as_view(), name='confirm-email'),
-     path('company-registration/<int:pk>/', get_company_details, name='company-details'),     
+    path('api/confirm-email/<str:token>/', ConfirmEmailView.as_view(), name='confirm-email'),
+    path('company-registration/<int:pk>/', get_company_details, name='company-details'),  
+    path('api/user-profile/', get_user_profile, name='user-profile'),
+    path('api/change-password/', change_password, name='change_password'),
 ]

@@ -26,7 +26,7 @@ from datetime import timedelta
 from django.utils.timezone import now
 
 
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view , permission_classes
 
 from itsdangerous import URLSafeTimedSerializer
 
@@ -361,3 +361,61 @@ class ServiceList(APIView):
         serializer = ServiceSerializer(services, many=True)
         # Return serialized data as a response
         return Response(serializer.data)
+
+
+
+#Userprofile 
+from rest_framework.permissions import IsAuthenticated
+
+CustomUser = get_user_model()
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def get_user_profile(request):
+    user = request.user
+
+    # GET Request: Return the user's profile data
+    if request.method == 'GET':
+        return Response({
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone_number": user.phone_number,  # Ensure phone_number is included
+            "address": user.profile.address if hasattr(user, "profile") else "",
+        })
+
+    # PUT Request: Update the user's profile data
+    elif request.method == 'PUT':
+        data = request.data
+        user.first_name = data.get("first_name", user.first_name)
+        user.last_name = data.get("last_name", user.last_name)
+        user.phone_number = data.get("phone_number", user.phone_number)
+        if hasattr(user, "profile"):
+            user.profile.address = data.get("address", user.profile.address)
+            user.profile.save()
+        user.save()
+
+        return Response({"message": "Profile updated successfully!"})
+        
+    #client profile password change
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    user = request.user
+    data = request.data
+    print(f"Request Data: {request.data}")
+    print(f"User: {request.user}")
+
+    current_password = data.get('currentPassword')
+    new_password = data.get('newPassword')
+
+    if not user.check_password(current_password):
+        return Response({"error": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if new_password:
+        user.set_password(new_password)
+        user.save()
+        return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+
+    return Response({"error": "New password is required."}, status=status.HTTP_400_BAD_REQUEST)
