@@ -11,6 +11,7 @@ import ViewCompanyDetails from "./components/ViewCompanyDetails";
 import CompanyDashboard from './pages/CompanyDashboard';
 import ClientDashboard from './pages/ClientDashboard';
 import RestPasswordView from './pages/RestPassswordView';
+import ClientProfile from './pages/ClientProfile';
 const App = () => {
   const location = useLocation(); // Correct hook name
   const navbarRoutes = ["/","/home", "/login", "/signup", "/companyregistration"];
@@ -30,6 +31,7 @@ const App = () => {
         <Route path="/company" element={<CompanyDashboard />} />
         <Route path="/client" element={<ClientDashboard />} />
         <Route path="/restpasswordview/:token" element={<RestPasswordView/>} />
+        <Route path="/client/client-profile" element={<ClientProfile/>} />
 
       </Routes>
     </>
