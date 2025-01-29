@@ -48,22 +48,25 @@ class CustomUser(AbstractUser):
     
 
 #product model
-#User = get_user_model()
-
+from django.db import models
 class Product(models.Model):
-    CATEGORY_CHOICES = [
-        ('selling', 'Selling'),
-        ('renting', 'Renting'),
-    ]
-
     title = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES)
-    #company = models.ForeignKey(User, on_delete=models.CASCADE, related_name="products")  # Link to the construction company or material supplier
+    per_day_rent = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Field for per day rent
+    image = models.ImageField(upload_to='product_images/', null=True, blank=True)
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)  # Discount percentage
+    category = models.CharField(max_length=50, choices=[('selling', 'Selling'), ('renting', 'Renting')])
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     is_available = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
+    def final_rent_price(self):
+        """Calculate the final rent price after applying discount."""
+        if self.per_day_rent and self.discount_percentage:
+            discount_amount = (self.per_day_rent * self.discount_percentage) / 100
+            return self.per_day_rent - discount_amount
+        return self.per_day_rent
 
     def __str__(self):
         return self.title
