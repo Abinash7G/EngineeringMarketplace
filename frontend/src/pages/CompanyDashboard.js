@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Typography, Grid, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
 import Sidebar from "../components/Sidebar";
+import API from "../services/api";
 
 const CompanyDashboard = () => {
   const companyName = "TechBuild Co."; // Replace with dynamic data
