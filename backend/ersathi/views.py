@@ -419,3 +419,32 @@ def change_password(request):
         return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
 
     return Response({"error": "New password is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+#fetching product
+from .models import Product
+from .serializers import ProductSerializer
+@api_view(['GET'])
+def get_all_products(request):
+    try:
+        products = Product.objects.all()
+        serializer = ProductSerializer(products, many=True, context={'request': request})
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_products_by_category(request, category):
+    products = Product.objects.filter(category=category, is_available=True)
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_company_products(request):
+    user = request.user
+    products = Product.objects.filter(company=user)
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data)

@@ -24,7 +24,9 @@ from ersathi.views import CompanyRegistrationView, get_company_registrations, ap
 from ersathi.views import ServiceList
 from ersathi.views import ConfirmEmailView , ResetPasswordView
 from ersathi.views import change_password
-
+from ersathi.views import get_all_products, get_products_by_category, get_company_products
+from django.conf import settings
+from django.conf.urls.static import static
 
 
 urlpatterns = [
@@ -45,4 +47,13 @@ urlpatterns = [
     path('company-registration/<int:pk>/', get_company_details, name='company-details'),  
     path('api/user-profile/', get_user_profile, name='user-profile'),
     path('api/change-password/', change_password, name='change_password'),
-]
+    path('api/products/', get_all_products, name='get_all_products'),
+    path('api/products/<str:category>/', get_products_by_category, name='get_products_by_category'),
+    path('api/company-products/', get_company_products, name='get_company_products'),
+    
+]   
+
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
