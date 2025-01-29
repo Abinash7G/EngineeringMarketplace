@@ -12,6 +12,10 @@ import CompanyDashboard from './pages/CompanyDashboard';
 import ClientDashboard from './pages/ClientDashboard';
 import RestPasswordView from './pages/RestPassswordView';
 import ClientProfile from './pages/ClientProfile';
+import ClientNavbar from './components/ClientNavbar';
+import CDProduct from './components/CDProduct';
+import Cart from './components/Cart';
+import Wishlist from './components/Wishlist';
 const App = () => {
   const location = useLocation(); // Correct hook name
   const navbarRoutes = ["/","/home", "/login", "/signup", "/companyregistration"];
@@ -32,7 +36,11 @@ const App = () => {
         <Route path="/client" element={<ClientDashboard />} />
         <Route path="/restpasswordview/:token" element={<RestPasswordView/>} />
         <Route path="/client/client-profile" element={<ClientProfile/>} />
-
+        <Route path="/ClientNavBar" element={<ClientNavbar/>} />
+        <Route path="/CDproduct" element={<CDProduct/>} />
+        <Route path="/client/cart" element={<Cart/>}/>
+        <Route path="/client/wishlist" element={<Wishlist/>} />
+        
       </Routes>
     </>
   );

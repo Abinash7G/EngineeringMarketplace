@@ -9,9 +9,12 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Phone, LocationOn, CheckCircle } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";  // Import useNavigate
 import API from "../services/api";
 
 const ClientProfile = () => {
+  const navigate = useNavigate();  // Define navigate here
+
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
@@ -62,7 +65,7 @@ const ClientProfile = () => {
   // Save changes to the profile
   const handleSaveChanges = async () => {
     try {
-      const response = await API.put("/api/user-profile/", {
+      await API.put("/api/user-profile/", {
         first_name: profile.firstName,
         last_name: profile.lastName,
         phone_number: profile.phoneNumber,
@@ -81,7 +84,7 @@ const ClientProfile = () => {
       setMessage("New password and confirm password do not match.");
       return;
     }
-  
+
     try {
       await API.put("/api/change-password/", {
         currentPassword: passwords.currentPassword,
@@ -94,10 +97,14 @@ const ClientProfile = () => {
       setMessage("Error updating password. Please try again.");
     }
   };
-  
-  
+
   return (
     <Box sx={{ padding: "20px" }}>
+      {/* Back Button */}
+      <Button variant="outlined" onClick={() => navigate(-1)} sx={{ marginBottom: "20px" }}>
+        Back
+      </Button>
+
       {/* Title with user's first and last name */}
       <Typography variant="h4" gutterBottom>
         Profile, {`${profile.firstName} ${profile.lastName}`}
