@@ -7,10 +7,10 @@ import {
   TableHead,
   TableRow,
   Typography,
-  Button,
   IconButton,
   Box,
   Paper,
+  Button,
 } from "@mui/material";
 import { Delete, ArrowBack } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -56,15 +56,11 @@ const Wishlist = () => {
 
   return (
     <Box sx={{ padding: "20px" }}>
-      {/* Back Button */}
+      {/* Back Arrow Icon */}
       <Box sx={{ display: "flex", alignItems: "center", marginBottom: "20px" }}>
-        <Button
-          startIcon={<ArrowBack />}
-          variant="outlined"
-          onClick={handleGoBack}
-        >
-          Back
-        </Button>
+        <IconButton onClick={handleGoBack} color="primary">
+          <ArrowBack />
+        </IconButton>
       </Box>
 
       {/* Wishlist Table */}
@@ -86,10 +82,7 @@ const Wishlist = () => {
             {wishlistItems.map((item) => (
               <TableRow key={item.id}>
                 <TableCell>
-                  <IconButton
-                    onClick={() => handleRemove(item)}
-                    color="error"
-                  >
+                  <IconButton onClick={() => handleRemove(item)} color="error">
                     <Delete />
                   </IconButton>
                 </TableCell>

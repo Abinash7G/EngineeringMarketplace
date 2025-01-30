@@ -41,9 +41,34 @@ const ClientDashboard = () => {
   };
 
   const handleAddToCart = (product) => {
-    if (!cart.find((item) => item.id === product.id)) {
-      setCart([...cart, product]);
+    const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+    
+    // Check if product already exists in cart
+    const existingItem = cartItems.find(item => item.id === product.id);
+    
+    if (existingItem) {
+      // If exists, increment quantity
+      const updatedItems = cartItems.map(item =>
+        item.id === product.id 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      );
+      localStorage.setItem('cartItems', JSON.stringify(updatedItems));
+    } else {
+      // If new item, add to cart with quantity 1
+      const newItem = {
+        id: product.id,
+        name: product.title,
+        price: product.category === 'selling' ? product.price : product.per_day_rent,
+        quantity: 1,
+        image: product.image,
+        color: product.color || ''
+      };
+      localStorage.setItem('cartItems', JSON.stringify([...cartItems, newItem]));
     }
+    
+    // Trigger storage event for cart component to update
+    window.dispatchEvent(new Event('storage'));
   };
 
   return (

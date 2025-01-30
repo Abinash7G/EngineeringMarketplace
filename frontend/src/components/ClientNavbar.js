@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -12,23 +12,42 @@ import {
 import { Search, Favorite, ShoppingCart, AccountCircle } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
-const ClientNavbar = ({ username, wishlist, cart, onNavigateToProfile }) => {
+const ClientNavbar = ({ username, wishlist, onNavigateToProfile }) => {
   const navigate = useNavigate();
   const [profileAnchor, setProfileAnchor] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
+
+  // Add useEffect to track cart count
+  useEffect(() => {
+    // Initial cart count
+    updateCartCount();
+
+    // Listen for cart updates
+    window.addEventListener('storage', updateCartCount);
+    
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+    };
+  }, []);
+
+  const updateCartCount = () => {
+    const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+    setCartCount(cartItems.length);
+  };
 
   const handleWishlistClick = () => {
-    navigate("/client/wishlist"); // Redirect to Wishlist page
+    navigate("/client/wishlist");
   };
 
   const handleCartClick = () => {
-    navigate("/client/cart"); // Redirect to Cart page
+    navigate("/client/cart");
   };
 
   const handleProfileClick = (event) => setProfileAnchor(event.currentTarget);
   const handleProfileClose = () => setProfileAnchor(null);
 
   const handleLogout = () => {
-    navigate("/"); // Redirect to home
+    navigate("/");
   };
 
   return (
@@ -45,7 +64,7 @@ const ClientNavbar = ({ username, wishlist, cart, onNavigateToProfile }) => {
             </Badge>
           </IconButton>
           <IconButton onClick={handleCartClick}>
-            <Badge badgeContent={cart.length} color="secondary">
+            <Badge badgeContent={cartCount} color="secondary">
               <ShoppingCart />
             </Badge>
           </IconButton>
