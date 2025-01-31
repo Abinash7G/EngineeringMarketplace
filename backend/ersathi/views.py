@@ -429,7 +429,7 @@ from .serializers import ProductSerializer
 def get_all_products(request):
     try:
         products = Product.objects.all()
-        serializer = ProductSerializer(products, many=True, context={'request': request})
+        serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
@@ -448,3 +448,75 @@ def get_company_products(request):
     products = Product.objects.filter(company=user)
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data)
+
+
+
+####################################
+#Django Views for Cart and Wishlist
+####################################
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Cart, Wishlist, Product
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_cart(request):
+    user = request.user
+    cart_items = Cart.objects.filter(user=user)
+    data = [{'image':item.product.image.url , 'product_id': item.product.id, 'name': item.product.title, 'price': str(item.product.price), 'quantity': item.quantity} for item in cart_items]
+    return Response(data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_to_cart(request):
+    user = request.user
+    product_id = request.data.get('product_id')
+    quantity = request.data.get('quantity', 1)
+
+    product = get_object_or_404(Product, id=product_id)
+    cart_item, created = Cart.objects.get_or_create(user=user, product=product, defaults={'quantity': quantity})
+    if not created:
+        cart_item.quantity += quantity
+        cart_item.save()
+
+    return Response({'message': 'Item added to cart'}, status=status.HTTP_201_CREATED)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_from_cart(request, product_id):
+    user = request.user
+    cart_item = get_object_or_404(Cart, user=user, product_id=product_id)
+    cart_item.delete()
+    return Response({'message': 'Item removed from cart'}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_wishlist(request):
+    user = request.user
+    wishlist_items = Wishlist.objects.filter(user=user)
+    data = [{'product_id': item.product.id, 'name': item.product.title, 'price': str(item.product.price)} for item in wishlist_items]
+    return Response(data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_to_wishlist(request):
+    user = request.user
+    product_id = request.data.get('product_id')
+
+    product = get_object_or_404(Product, id=product_id)
+    Wishlist.objects.get_or_create(user=user, product=product)
+    return Response({'message': 'Item added to wishlist'}, status=status.HTTP_201_CREATED)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_from_wishlist(request, product_id):
+    user = request.user
+    wishlist_item = get_object_or_404(Wishlist, user=user, product_id=product_id)
+    wishlist_item.delete()
+    return Response({'message': 'Item removed from wishlist'}, status=status.HTTP_204_NO_CONTENT)
+
