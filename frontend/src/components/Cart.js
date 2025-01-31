@@ -15,73 +15,76 @@ import {
 } from "@mui/material";
 import { Delete, ArrowBack } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import API, { fetchCartItems } from "../services/api";
 
 const Cart = () => {
-  // Replace static useState with useEffect to load cart items from localStorage or global state
   const [cartItems, setCartItems] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load cart items from localStorage or your preferred storage method
-    const loadCartItems = () => {
-      const savedCart = localStorage.getItem('cartItems');
-      if (savedCart) {
-        setCartItems(JSON.parse(savedCart));
+    const loadCartItems = async () => {
+      try {
+        const response = await fetchCartItems();
+        setCartItems(response.data);
+      } catch (error) {
+        console.error("Error fetching cart items:", error);
       }
     };
 
     loadCartItems();
-    
-    // Optional: Subscribe to cart updates if using a state management solution
-    const handleCartUpdate = (event) => {
-      if (event.key === 'cartItems') {
-        loadCartItems();
-      }
-    };
-    
-    window.addEventListener('storage', handleCartUpdate);
-    return () => window.removeEventListener('storage', handleCartUpdate);
   }, []);
 
-  // Calculate Subtotal
-  const subtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
-
-  // Update quantity and sync with storage
-  const updateCartItems = (newItems) => {
-    setCartItems(newItems);
-    localStorage.setItem('cartItems', JSON.stringify(newItems));
+  const handleIncrement = async (id) => {
+    try {
+      await API.post('/api/cart/add/', {
+        product_id: id,
+        quantity: 1,
+      });
+      const response = await fetchCartItems();
+      setCartItems(response.data);
+    } catch (error) {
+      console.error("Error incrementing item:", error);
+    }
   };
 
-  const handleIncrement = (id) => {
-    const newItems = cartItems.map((item) =>
-      item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-    );
-    updateCartItems(newItems);
+  const handleDecrement = async (id) => {
+    const item = cartItems.find((item) => item.product_id === id);
+    if (item.quantity > 1) {
+      try {
+        await API.post('/api/cart/add/', {
+          product_id: id,
+          quantity: -1,
+        });
+        const response = await fetchCartItems();
+        setCartItems(response.data);
+      } catch (error) {
+        console.error("Error decrementing item:", error);
+      }
+    }
   };
 
-  const handleDecrement = (id) => {
-    const newItems = cartItems.map((item) =>
-      item.id === id && item.quantity > 1
-        ? { ...item, quantity: item.quantity - 1 }
-        : item
-    );
-    updateCartItems(newItems);
-  };
-
-  const handleDelete = (id) => {
-    const newItems = cartItems.filter((item) => item.id !== id);
-    updateCartItems(newItems);
+  const handleDelete = async (id) => {
+    try {
+      await API.delete(`/api/cart/remove/${id}/`);
+      const response = await fetchCartItems();
+      setCartItems(response.data);
+    } catch (error) {
+      console.error("Error removing item:", error);
+    }
   };
 
   const handleGoBack = () => {
     navigate(-1);
   };
 
-  // Add a function to handle checkout
-  const handleCheckout = () => {
-    // Implement checkout logic
-    console.log('Proceeding to checkout with items:', cartItems);
+  const handleCheckout = async () => {
+    console.log("Proceeding to checkout with items:", cartItems);
   };
+
+  const subtotal = cartItems.reduce(
+    (total, item) => total + parseFloat(item.price) * item.quantity,
+    0
+  );
 
   return (
     <Box sx={{ padding: "20px", display: "flex", flexDirection: "row", gap: "30px" }}>
@@ -95,9 +98,9 @@ const Cart = () => {
         <Typography variant="h4" gutterBottom>
           Cart items
         </Typography>
-        
+
         {cartItems.length === 0 ? (
-          <Typography variant="h6" sx={{ textAlign: 'center', my: 4 }}>
+          <Typography variant="h6" sx={{ textAlign: "center", my: 4 }}>
             Your cart is empty
           </Typography>
         ) : (
@@ -114,20 +117,15 @@ const Cart = () => {
               </TableHead>
               <TableBody>
                 {cartItems.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.product_id}>
                     <TableCell>
                       <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
                         <img
-                          src={item.image || `https://via.placeholder.com/50`}
+                          src={item.image ? `http://127.0.0.1:8000${item.image}` : "/api/placeholder/50/50"}
                           alt={item.name}
                           style={{ width: "50px", height: "50px", borderRadius: "8px" }}
                         />
-                        <Box>
-                          <Typography>{item.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {item.color}
-                          </Typography>
-                        </Box>
+                        <Typography>{item.name}</Typography>
                       </Box>
                     </TableCell>
                     <TableCell>Rs. {item.price}</TableCell>
@@ -136,7 +134,7 @@ const Cart = () => {
                         <Button
                           variant="outlined"
                           size="small"
-                          onClick={() => handleDecrement(item.id)}
+                          onClick={() => handleDecrement(item.product_id)}
                         >
                           -
                         </Button>
@@ -149,15 +147,15 @@ const Cart = () => {
                         <Button
                           variant="outlined"
                           size="small"
-                          onClick={() => handleIncrement(item.id)}
+                          onClick={() => handleIncrement(item.product_id)}
                         >
                           +
                         </Button>
                       </Box>
                     </TableCell>
-                    <TableCell>Rs. {item.price * item.quantity}</TableCell>
+                    <TableCell>Rs. {parseFloat(item.price) * item.quantity}</TableCell>
                     <TableCell>
-                      <IconButton color="error" onClick={() => handleDelete(item.id)}>
+                      <IconButton color="error" onClick={() => handleDelete(item.product_id)}>
                         <Delete />
                       </IconButton>
                     </TableCell>
@@ -199,10 +197,10 @@ const Cart = () => {
           <Typography variant="h6">Total</Typography>
           <Typography variant="h6">Rs. {subtotal}</Typography>
         </Box>
-        <Button 
-          variant="contained" 
-          color="success" 
-          fullWidth 
+        <Button
+          variant="contained"
+          color="success"
+          fullWidth
           onClick={handleCheckout}
           disabled={cartItems.length === 0}
         >

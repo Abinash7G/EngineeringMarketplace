@@ -40,4 +40,12 @@ export const fetchUserProfile = async () => {
   }
 };
 
+export const fetchCartItems = () => API.get("/api/cart/");
+export const fetchWishlistItems = () => API.get("/api/wishlist/");
+export const addToCart = (productId) => API.post("/api/cart/add/", { product_id: productId });
+export const addToWishlist = (productId) => API.post("/api/wishlist/add/", { product_id: productId });
+export const removeFromWishlist = (productId) => API.delete(`/api/wishlist/remove/${productId}/`);
+export const removeFromCart = (productId) => API.delete(`/api/cart/remove/${productId}/`);
+
+
 export default API;
