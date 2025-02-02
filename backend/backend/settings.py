@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import stripe
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'social_django',
     'django_rest_passwordreset',
+    'payments',
 
 ]
 
@@ -51,7 +53,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    #'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -152,11 +154,18 @@ AUTH_USER_MODEL = 'ersathi.CustomUser'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000", 
     "http://localhost:3001",  # frontend's URL
+    "http://127.0.0.1",
+    "http://localhost"
+    
 ]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://127.0.0.1",
+    "http://localhost"
+
 ]
+CSRF_COOKIE_SECURE = False
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -192,3 +201,6 @@ SIMPLE_JWT = {
 }
 
 
+#PAYMENT GATEWAY STRIPE KEYS
+STRIPE_SECRET_KEY = 'sk_test_51QnOg8HFXrh998KlLdTxh4bVatiAoAVCKbtUU5jSUzUcULjFznLuI7sRivfgc38kbsG2JQ5UqMArdbHZSJbwBFXH00AviwVSFp'
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51QnOg8HFXrh998Klft0d4A2QId9hPWxhNlU12COVn2WXlCgzx6BreTWwIE6zNBjINEMd1wANva7HvkWhHKS3XUnp00kQmaYhHn'

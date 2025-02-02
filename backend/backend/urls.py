@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from ersathi.views import ServiceList, get_user_profile
+from ersathi.views import CreateProduct, ServiceList, Test, get_user_profile
 from ersathi.views import SignupView, LoginView
 from django.urls import path, include
 from ersathi.views import ForgotPasswordView
@@ -29,7 +29,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path
 from ersathi.views import get_cart, add_to_cart, remove_from_cart, get_wishlist, add_to_wishlist, remove_from_wishlist
-
+from payments.views import PaymentAPI, create_payment_intent
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -53,6 +53,10 @@ urlpatterns = [
     path('api/products/', get_all_products, name='get_all_products'),
     path('api/products/<str:category>/', get_products_by_category, name='get_products_by_category'),
     path('api/company-products/', get_company_products, name='get_company_products'),
+    ##
+    path('api/products/create/', CreateProduct.as_view(), name='create_product'),
+    #path('api/products/<int:pk>/', create_product, name='update_product'), 
+    path('api/test/', Test.as_view(), name='create_Test'),
     #Cart
     path('api/cart/', get_cart, name='get_cart'),
     path('api/cart/add/', add_to_cart, name='add_to_cart'),
@@ -60,6 +64,10 @@ urlpatterns = [
     path('api/wishlist/', get_wishlist, name='get_wishlist'),
     path('api/wishlist/add/', add_to_wishlist, name='add_to_wishlist'),
     path('api/wishlist/remove/<int:product_id>/', remove_from_wishlist, name='remove_from_wishlist'),
+    #payment
+    path('make_payment/', PaymentAPI.as_view(), name='make_payment'),
+     path('api/payment-intent/', create_payment_intent),
+
     
 ]   
 

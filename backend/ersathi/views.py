@@ -450,6 +450,72 @@ def get_company_products(request):
     return Response(serializer.data)
 
 
+#post Product from from company 
+class CreateProduct(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        user = request.user
+        data = request.data
+        try:
+            # Assign company dynamically
+            company = user.company
+            category = "Renting" if "Construction" in company.company_type else "Selling"
+
+            # Create a new product
+            product = Product.objects.create(
+                title=data['title'],
+                description=data['description'],
+                price=data['price'],
+                per_day_rent=data['per_day_rent'],
+                image=data.get('image'),
+                discount_percentage=data['discount_percentage'],
+                category=category,
+                company=company,
+                is_available=data['is_available'],
+            )
+            serializer = ProductSerializer(product)
+            return Response(serializer.data, status=201)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+        
+#post Product from from company 
+class Test(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        user = request.user
+        data = request.data
+    
+            # Assign company dynamically
+        company = user.company
+        category = "Renting" if "Construction" in company.company_type else "Selling"
+
+        # Create a new product
+        from decimal import Decimal
+
+        product = Product.objects.create(
+        title=data['title'],
+        description=data['description'],
+        price=Decimal(data['price']),
+        per_day_rent=Decimal(data['perDayRent']),
+        discount_percentage=Decimal(data['discountPercentage']) if data['discountPercentage'] else None,
+        category=category,
+        company=company,
+        is_available=data['isAvailable'],
+        )
+
+        return Response({},status=201)
+    
+
+       
+            
+        
+            
+         
+        
+    
+
+
 
 ####################################
 #Django Views for Cart and Wishlist
@@ -468,7 +534,7 @@ User = get_user_model()
 def get_cart(request):
     user = request.user
     cart_items = Cart.objects.filter(user=user)
-    data = [{'image':item.product.image.url , 'product_id': item.product.id, 'name': item.product.title, 'price': str(item.product.price), 'quantity': item.quantity} for item in cart_items]
+    data = [{'image':item.product.image.url, 'company_name': item.product.company.company_name, 'category':item.product.category, 'product_id': item.product.id, 'name': item.product.title, 'price': str(item.product.price), 'quantity': item.quantity} for item in cart_items]
     return Response(data)
 
 @api_view(['POST'])
