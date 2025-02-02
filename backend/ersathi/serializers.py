@@ -14,6 +14,7 @@ class CompanyRegistrationSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    company_name = serializers.CharField(source='company.company_name', read_only=True)  
     class Meta:
         model = Product
         fields = '__all__'
