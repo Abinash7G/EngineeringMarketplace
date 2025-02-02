@@ -12,13 +12,16 @@ import {
   IconButton,
   TextField,
   Paper,
+  Modal,
 } from "@mui/material";
 import { Delete, ArrowBack } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import API, { fetchCartItems } from "../services/api";
+import CDCheckoutForm from "./CDCheckoutForm";
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
+  const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,7 +39,7 @@ const Cart = () => {
 
   const handleIncrement = async (id) => {
     try {
-      await API.post('/api/cart/add/', {
+      await API.post("/api/cart/add/", {
         product_id: id,
         quantity: 1,
       });
@@ -51,7 +54,7 @@ const Cart = () => {
     const item = cartItems.find((item) => item.product_id === id);
     if (item.quantity > 1) {
       try {
-        await API.post('/api/cart/add/', {
+        await API.post("/api/cart/add/", {
           product_id: id,
           quantity: -1,
         });
@@ -77,8 +80,13 @@ const Cart = () => {
     navigate(-1);
   };
 
-  const handleCheckout = async () => {
-    console.log("Proceeding to checkout with items:", cartItems);
+  const handleCheckout = () => {
+    setShowCheckoutForm(true);
+  };
+
+  const handleProceedToPayment = (formData) => {
+    console.log("Proceeding to payment with form data:", formData);
+    navigate("/payment");
   };
 
   const subtotal = cartItems.reduce(
@@ -86,9 +94,67 @@ const Cart = () => {
     0
   );
 
+  const buyingItems = cartItems.filter((item) => item.category === "selling");
+  const rentingItems = cartItems.filter((item) => item.category === "renting");
+
+  const renderItems = (items) => (
+    <TableBody>
+      {items.map((item) => (
+        <TableRow key={item.product_id}>
+          <TableCell>
+            <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <img
+                src={`http://127.0.0.1:8000${item.image}`}
+                alt={item.name}
+                style={{ width: "50px", height: "50px", borderRadius: "8px" }}
+              />
+              <Box>
+                <Typography>{item.name}</Typography>
+                <Typography sx={{ fontSize: "0.9rem", color: "text.secondary" }}>
+                  {item.company_name}
+                </Typography>
+              </Box>
+            </Box>
+          </TableCell>
+          <TableCell>Rs. {item.price}</TableCell>
+          <TableCell>
+            <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleDecrement(item.product_id)}
+              >
+                -
+              </Button>
+              <TextField
+                value={item.quantity}
+                size="small"
+                sx={{ width: "50px", textAlign: "center" }}
+                inputProps={{ readOnly: true }}
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleIncrement(item.product_id)}
+              >
+                +
+              </Button>
+            </Box>
+          </TableCell>
+          <TableCell>Rs. {parseFloat(item.price) * item.quantity}</TableCell>
+          <TableCell>
+            <IconButton color="error" onClick={() => handleDelete(item.product_id)}>
+              <Delete />
+            </IconButton>
+          </TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  );
+
   return (
     <Box sx={{ padding: "20px", display: "flex", flexDirection: "row", gap: "30px" }}>
-      <Box sx={{ marginBottom: "20px" }}>
+      <Box>
         <IconButton onClick={handleGoBack} color="primary">
           <ArrowBack />
         </IconButton>
@@ -99,71 +165,48 @@ const Cart = () => {
           Cart items
         </Typography>
 
-        {cartItems.length === 0 ? (
-          <Typography variant="h6" sx={{ textAlign: "center", my: 4 }}>
-            Your cart is empty
-          </Typography>
-        ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Product</TableCell>
-                  <TableCell>Price</TableCell>
-                  <TableCell>Quantity</TableCell>
-                  <TableCell>Total</TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {cartItems.map((item) => (
-                  <TableRow key={item.product_id}>
-                    <TableCell>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <img
-                          src={item.image ? `http://127.0.0.1:8000${item.image}` : "/api/placeholder/50/50"}
-                          alt={item.name}
-                          style={{ width: "50px", height: "50px", borderRadius: "8px" }}
-                        />
-                        <Typography>{item.name}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>Rs. {item.price}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleDecrement(item.product_id)}
-                        >
-                          -
-                        </Button>
-                        <TextField
-                          value={item.quantity}
-                          size="small"
-                          sx={{ width: "50px", textAlign: "center" }}
-                          inputProps={{ readOnly: true }}
-                        />
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleIncrement(item.product_id)}
-                        >
-                          +
-                        </Button>
-                      </Box>
-                    </TableCell>
-                    <TableCell>Rs. {parseFloat(item.price) * item.quantity}</TableCell>
-                    <TableCell>
-                      <IconButton color="error" onClick={() => handleDelete(item.product_id)}>
-                        <Delete />
-                      </IconButton>
-                    </TableCell>
+        {buyingItems.length > 0 && (
+          <>
+            <Typography variant="h6" sx={{ fontWeight: "bold", mt: 3, mb: 2 }}>
+              BUYING ITEM
+            </Typography>
+            <TableContainer component={Paper} sx={{ marginBottom: "20px" }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Product</TableCell>
+                    <TableCell>Price</TableCell>
+                    <TableCell>Quantity</TableCell>
+                    <TableCell>Total</TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                {renderItems(buyingItems)}
+              </Table>
+            </TableContainer>
+          </>
+        )}
+
+        {rentingItems.length > 0 && (
+          <>
+            <Typography variant="h6" sx={{ fontWeight: "bold", mt: 3, mb: 2 }}>
+              RENTING ITEM
+            </Typography>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Product</TableCell>
+                    <TableCell>Price</TableCell>
+                    <TableCell>Quantity</TableCell>
+                    <TableCell>Total</TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableHead>
+                {renderItems(rentingItems)}
+              </Table>
+            </TableContainer>
+          </>
         )}
       </Box>
 
@@ -200,13 +243,23 @@ const Cart = () => {
         <Button
           variant="contained"
           color="success"
-          fullWidth
           onClick={handleCheckout}
           disabled={cartItems.length === 0}
         >
           Checkout
         </Button>
       </Box>
+
+      <Modal open={showCheckoutForm} onClose={() => setShowCheckoutForm(false)}>
+        <Box sx={{ margin: "20px", padding: "20px", backgroundColor: "white", borderRadius: "8px" }}>
+          <CDCheckoutForm
+            buyingItems={buyingItems}
+            rentingItems={rentingItems}
+            cartTotal={subtotal}
+            onProceed={handleProceedToPayment}
+          />
+        </Box>
+      </Modal>
     </Box>
   );
 };
