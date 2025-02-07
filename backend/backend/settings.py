@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import stripe
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,18 +44,20 @@ INSTALLED_APPS = [
     'corsheaders',
     'social_django',
     'django_rest_passwordreset',
+    'payments',
 
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    #'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
+    
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -138,6 +141,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -148,12 +152,25 @@ REST_FRAMEWORK = {
 AUTH_USER_MODEL = 'ersathi.CustomUser'
 
 CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000", 
     "http://localhost:3001",  # frontend's URL
+    "http://127.0.0.1",
+    "http://localhost"
+    
 ]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1",
+    "http://localhost"
+
+]
+CSRF_COOKIE_SECURE = False
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ),
 }
 
@@ -161,7 +178,8 @@ AUTHENTICATION_BACKENDS = [
     'social_core.backends.google.GoogleOAuth2',
     'django.contrib.auth.backends.ModelBackend',
 ]
-
+# Allow credentials (cookies, Authorization headers)
+CORS_ALLOW_CREDENTIALS = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'YOUR_GOOGLE_CLIENT_ID'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'YOUR_GOOGLE_CLIENT_SECRET'
 
@@ -175,4 +193,14 @@ EMAIL_HOST_USER = "fybproject6@gmail.com"
 EMAIL_HOST_PASSWORD = 'pqgc osyk eiyn ggjv'   #FYProject1@!
 
 
+from datetime import timedelta
 
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+}
+
+
+#PAYMENT GATEWAY STRIPE KEYS
+STRIPE_SECRET_KEY = 'sk_test_51QnOg8HFXrh998KlLdTxh4bVatiAoAVCKbtUU5jSUzUcULjFznLuI7sRivfgc38kbsG2JQ5UqMArdbHZSJbwBFXH00AviwVSFp'
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51QnOg8HFXrh998Klft0d4A2QId9hPWxhNlU12COVn2WXlCgzx6BreTWwIE6zNBjINEMd1wANva7HvkWhHKS3XUnp00kQmaYhHn'

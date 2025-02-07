@@ -1,3 +1,4 @@
+import token
 from django.contrib.auth.models import Group
 from django.shortcuts import render
 from rest_framework.views import APIView
@@ -25,7 +26,7 @@ from datetime import timedelta
 from django.utils.timezone import now
 
 
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view , permission_classes
 
 from itsdangerous import URLSafeTimedSerializer
 
@@ -177,10 +178,47 @@ class ForgotPasswordView(APIView):
             user = User.objects.get(email=email)  # Get the user by email
         except User.DoesNotExist:
             return Response({"error": "User with this email does not exist."}, status=400)
+        
+        reset_url = f"http://localhost:3001/restpasswordview/{generate_verification_token(email=user.email)}/"
 
+        send_mail(
+                subject="Password Reset Request",
+                message=f"Click the link below to reset your password://\n{reset_url}",
+                from_email="noreply@yourdomain.com",  # Replace with your sender email
+                recipient_list=[email],
+                fail_silently=False,
+            )
         # Logic for sending the password reset email goes here
         return Response({"success": "Password reset email sent successfully."}, status=200)
+        
     
+class ResetPasswordView(APIView):
+    def post(self, request, token, *args, **kwargs):
+        email = verify_verification_token(token)
+        if not email: 
+            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+        password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
+        if password != confirm_password:
+            return Response({'error': 'Passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
+        print(password)
+
+        User = get_user_model()
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"error": "User with this email does not exist."}, status=400)
+        print(user.email)
+        user.set_password(password)
+        user.save()
+        return Response({"success": "Password reset Sucessfull."}, status=200)
+    
+    
+        
+        
+
+
+
 
 
 class CompanyRegistrationView(APIView):
@@ -323,3 +361,228 @@ class ServiceList(APIView):
         serializer = ServiceSerializer(services, many=True)
         # Return serialized data as a response
         return Response(serializer.data)
+
+
+
+#Userprofile 
+from rest_framework.permissions import IsAuthenticated
+
+CustomUser = get_user_model()
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def get_user_profile(request):
+    user = request.user
+
+    # GET Request: Return the user's profile data
+    if request.method == 'GET':
+        return Response({
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone_number": user.phone_number,  # Ensure phone_number is included
+            "address": user.profile.address if hasattr(user, "profile") else "",
+        })
+
+    # PUT Request: Update the user's profile data
+    elif request.method == 'PUT':
+        data = request.data
+        user.first_name = data.get("first_name", user.first_name)
+        user.last_name = data.get("last_name", user.last_name)
+        user.phone_number = data.get("phone_number", user.phone_number)
+        if hasattr(user, "profile"):
+            user.profile.address = data.get("address", user.profile.address)
+            user.profile.save()
+        user.save()
+
+        return Response({"message": "Profile updated successfully!"})
+        
+    #client profile password change
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    user = request.user
+    data = request.data
+    print(f"Request Data: {request.data}")
+    print(f"User: {request.user}")
+
+    current_password = data.get('currentPassword')
+    new_password = data.get('newPassword')
+
+    if not user.check_password(current_password):
+        return Response({"error": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if new_password:
+        user.set_password(new_password)
+        user.save()
+        return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+
+    return Response({"error": "New password is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+#fetching product
+from .models import Product
+from .serializers import ProductSerializer
+@api_view(['GET'])
+def get_all_products(request):
+    try:
+        products = Product.objects.all()
+        serializer = ProductSerializer(products, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_products_by_category(request, category):
+    products = Product.objects.filter(category=category, is_available=True)
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_company_products(request):
+    user = request.user
+    products = Product.objects.filter(company=user)
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data)
+
+
+#post Product from from company 
+class CreateProduct(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        user = request.user
+        data = request.data
+        try:
+            # Assign company dynamically
+            company = user.company
+            category = "Renting" if "Construction" in company.company_type else "Selling"
+
+            # Create a new product
+            product = Product.objects.create(
+                title=data['title'],
+                description=data['description'],
+                price=data['price'],
+                per_day_rent=data['per_day_rent'],
+                image=data.get('image'),
+                discount_percentage=data['discount_percentage'],
+                category=category,
+                company=company,
+                is_available=data['is_available'],
+            )
+            serializer = ProductSerializer(product)
+            return Response(serializer.data, status=201)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+        
+#post Product from from company 
+class Test(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        user = request.user
+        data = request.data
+    
+            # Assign company dynamically
+        company = user.company
+        category = "Renting" if "Construction" in company.company_type else "Selling"
+
+        # Create a new product
+        from decimal import Decimal
+
+        product = Product.objects.create(
+        title=data['title'],
+        description=data['description'],
+        price=Decimal(data['price']),
+        per_day_rent=Decimal(data['perDayRent']),
+        discount_percentage=Decimal(data['discountPercentage']) if data['discountPercentage'] else None,
+        category=category,
+        company=company,
+        is_available=data['isAvailable'],
+        )
+
+        return Response({},status=201)
+    
+
+       
+            
+        
+            
+         
+        
+    
+
+
+
+####################################
+#Django Views for Cart and Wishlist
+####################################
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Cart, Wishlist, Product
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_cart(request):
+    user = request.user
+    cart_items = Cart.objects.filter(user=user)
+    data = [{'image':item.product.image.url, 'company_name': item.product.company.company_name, 'category':item.product.category, 'product_id': item.product.id, 'name': item.product.title, 'price': str(item.product.price), 'quantity': item.quantity} for item in cart_items]
+    return Response(data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_to_cart(request):
+    user = request.user
+    product_id = request.data.get('product_id')
+    quantity = request.data.get('quantity', 1)
+
+    product = get_object_or_404(Product, id=product_id)
+    cart_item, created = Cart.objects.get_or_create(user=user, product=product, defaults={'quantity': quantity})
+    if not created:
+        cart_item.quantity += quantity
+        cart_item.save()
+
+    return Response({'message': 'Item added to cart'}, status=status.HTTP_201_CREATED)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_from_cart(request, product_id):
+    user = request.user
+    cart_item = get_object_or_404(Cart, user=user, product_id=product_id)
+    cart_item.delete()
+    return Response({'message': 'Item removed from cart'}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_wishlist(request):
+    user = request.user
+    wishlist_items = Wishlist.objects.filter(user=user)
+    data = [{'product_id': item.product.id, 'name': item.product.title, 'price': str(item.product.price)} for item in wishlist_items]
+    return Response(data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_to_wishlist(request):
+    user = request.user
+    product_id = request.data.get('product_id')
+
+    product = get_object_or_404(Product, id=product_id)
+    Wishlist.objects.get_or_create(user=user, product=product)
+    return Response({'message': 'Item added to wishlist'}, status=status.HTTP_201_CREATED)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_from_wishlist(request, product_id):
+    user = request.user
+    wishlist_item = get_object_or_404(Wishlist, user=user, product_id=product_id)
+    wishlist_item.delete()
+    return Response({'message': 'Item removed from wishlist'}, status=status.HTTP_204_NO_CONTENT)
+

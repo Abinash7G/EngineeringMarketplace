@@ -24,11 +24,13 @@ const Login = () => {
     try {
         const response = await API.post("/api/login/", formData);
         if (response.status === 200) {
-            const { access, role } = response.data;
+            const { access, role,company_id } = response.data;
             localStorage.setItem("access_token", access);
+            localStorage.setItem("company_id", company_id);
+            
 
             // Redirect based on role
-            if (role === "Platformadmin") navigate("/admin");
+            if (role === "Platformadmin") navigate("/admin"); //!* Redirect to admin dashboard *!
             else if (role === "Admin") navigate("/company"); //company dashboard
             else navigate("/client");
         }
