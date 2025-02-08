@@ -12,28 +12,40 @@ import {
 import { ArrowBack } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
+import {
+  fetchUserProfile
+} from "../services/api";
 
-
+import KhaltiPayments from "./KhaltiButton"; // <-- Import the separate Khalti component
 const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => {
   const navigate = useNavigate();
-
+// Buying info
   const [buyingForm, setBuyingForm] = useState({
     contactNumber: "",
     deliveryLocation: "",
   });
 
+  const [userdata, setUserData] = useState({})
+
+  // Renting info
   const [rentingForm, setRentingForm] = useState({
     name: "",
     contactNumber: "",
     address: "",
     surveyType: "",
-    rentingDays: 1, // Default to 1 day
+    rentingDays: 1, // Default to 0 day
     dateNeeded: "",
     idFile: null,
   });
-
+// Calculated prices
   const [totalPrice, setTotalPrice] = useState(cartTotal);
   const [rentingPrice, setRentingPrice] = useState(0);
+ // Logged-in user (if needed)
+ 
+
+ // Whether to show the Khalti button after form is validated
+ const [showKhalti, setShowKhalti] = useState(false);
+
 
   useEffect(() => {
     // Calculate initial renting price for default renting days
@@ -45,6 +57,20 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => 
       setRentingPrice(defaultRentingPrice);
       setTotalPrice(cartTotal + defaultRentingPrice);
     }
+
+     const loadInitialData = async () => {
+          try {
+    
+            // Load user data
+            const userData = await fetchUserProfile();
+            setUserData(userData);
+          } catch (error) {
+            console.error("Error loading initial data:", error);
+          }
+        };
+    
+      loadInitialData();
+    
   }, [cartTotal, rentingItems, rentingForm.rentingDays]);
 
   const handleRentingDaysChange = (e) => {
@@ -60,12 +86,15 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => 
     setTotalPrice(cartTotal + newRentingPrice);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
+    setShowKhalti(false); // reset
+  
     if (buyingItems.length > 0 && (!buyingForm.contactNumber || !buyingForm.deliveryLocation)) {
       alert("Please fill all buying details");
       return;
     }
+  
     if (
       rentingItems.length > 0 &&
       (!rentingForm.name ||
@@ -79,31 +108,51 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => 
       alert("Please fill all renting details");
       return;
     }
-    try{
-      const payload ={
+  
+    // Commenting out backend call for now
+    /*
+    try {
+      const payload = {
         customerName: rentingForm.name,
         contactNumber: rentingForm.contactNumber,
         deliveryLocation: rentingForm.address || buyingForm.deliveryLocation,
-        totalAmount : totalPrice,
-        
-        
-      }
-      console.log("Payload:", payload); // Log the payload to ensure it has all required fields
+        totalAmount: totalPrice,
+      };
+  
+      console.log("Payload:", payload); // Debugging log
+  
       // Send data to backend to create PaymentIntent
       const response = await API.post('/api/payment-intent/', {
         totalAmount: totalPrice, // Grand total from the form
-    });
-    const clientSecret = response.data.clientSecret;
-// Navigate to the Payment page with clientSecret and totalAmount
-    onProceed({ clientSecret, 
-      totalAmount: totalPrice, }); 
-    } catch (error) {
+      });
   
+      const clientSecret = response.data.clientSecret;
+  
+    } catch (error) {
       console.error("Error creating PaymentIntent:", error);
       alert("Unable to process payment. Please try again.");
+    }
+    */
+  
+    // Navigate directly to Esewa payment page
+        
+    // navigate("/khalti",{
+    //   state: { 
+    //     amount: totalPrice*100,
+    //     name: userdata.username,
+    //     email: userdata.email,
+    //     phone: "987652356265",
+    //     buyingForm,
+    //     rentingForm,
+    //     buyingItems,
+    //     rentingItems
+    // }
 
-    }   
+    // });
+    setShowKhalti(true);
   };
+  
+  
 
   return (
     <Box
@@ -283,15 +332,22 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => 
         </Typography>
 
         {/* Proceed to Payment Button */}
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSubmit}
-          fullWidth
-          sx={{ mt: 2 }}
-        >
-          Proceed to Payment
-        </Button>
+        {!showKhalti ? (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSubmit}
+            fullWidth
+            sx={{ mt: 2 }}
+          >
+            Pay with Khalti
+          </Button>
+        ) : (
+          // Once validated, show the KhaltiPayments component
+          <Box sx={{ mt: 2 }}>
+            <KhaltiPayments totalPrice={totalPrice} />
+          </Box>
+        )}
       </Paper>
     </Box>
   );

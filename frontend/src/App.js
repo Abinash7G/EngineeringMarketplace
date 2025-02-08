@@ -16,7 +16,20 @@ import ClientNavbar from './components/ClientNavbar';
 import CDProduct from './components/CDProduct';
 import Cart from './components/Cart';
 import Wishlist from './components/Wishlist';
-import Payment from './components/Payment'
+import CDCheckoutForm from './components/CDCheckoutForm';
+import Appointments from './components/Appointments';
+import Documents from './components/Documents';
+import ServicesManagement from './components/ServicesManagement';
+import MaterialsManagement from './components/MaterialsManagement';
+import ProfileSettings from './components/ProfileSettings';
+//import Esewa from './pages/Esewa';
+import KhaltiButton from './components/KhaltiButton';
+//import PaymentSuccess from './components/PaymentSuccess';
+//import KhaltiPayment from './components/KhaltiPayment';
+
+
+
+
 
 const App = () => {
   const location = useLocation(); // Correct hook name
@@ -42,7 +55,20 @@ const App = () => {
         <Route path="/CDproduct" element={<CDProduct/>} />
         <Route path="/client/cart" element={<Cart/>}/>
         <Route path="/client/wishlist" element={<Wishlist/>} />
-        <Route path="/payment" element={<Payment/>}/>
+        
+        <Route path="/checkout" element={<CDCheckoutForm/>}/>
+        <Route path="/appointments" element={<Appointments/>} />
+        <Route path="/documents" element={<Documents/>} />
+        <Route path="/services-management" element={<ServicesManagement/>} />
+        <Route path="/materials-management" element={<MaterialsManagement/>} />
+        <Route path="/profile-settings" element={<ProfileSettings/>} />
+        {/*<Route path="/esewa" element={<Esewa/>} />*/}
+        <Route path="/khalti" element={<KhaltiButton/>} /> 
+{/*
+        <Route path="/khalti1" element={<KhaltiPayment />} />
+        <Route path="/payment/callback" element={<PaymentSuccess />} /> */}
+
+        
         
       </Routes>
     </>
