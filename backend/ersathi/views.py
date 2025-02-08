@@ -1,5 +1,7 @@
+from ast import Load
 import token
 from django.contrib.auth.models import Group
+from django.forms import ValidationError
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -29,6 +31,13 @@ from django.utils.timezone import now
 from rest_framework.decorators import api_view , permission_classes
 
 from itsdangerous import URLSafeTimedSerializer
+
+import os
+import json
+import requests
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from dotenv import load_dotenv
 
 # Configure a secret key (use a strong, unique key)
 SECRET_KEY = "2e14a6352c97c2fe33315af6804d89d474432d4d5835326005d55695fd8a4274"
@@ -586,3 +595,178 @@ def remove_from_wishlist(request, product_id):
     wishlist_item.delete()
     return Response({'message': 'Item removed from wishlist'}, status=status.HTTP_204_NO_CONTENT)
 
+
+##payment##
+'''''''''''''''''
+
+class TransactionCreateAPIView(APIView):
+
+    def post(self, request):
+        data = request.data
+        
+        # Get payer and payee IDs
+        payer_id = data.get('payer')
+        payee_id = data.get('payee')
+        amount = data.get('amount')
+        description = data.get('description', '')  # Optional description
+
+        # Validate if payer and payee are valid users
+        try:
+            payer = CustomUser.objects.get(id=payer_id)
+        except CustomUser.DoesNotExist:
+            raise ValidationError("Payer does not exist.")
+
+        try:
+            payee = CustomUser.objects.get(id=payee_id)
+        except CustomUser.DoesNotExist:
+            raise ValidationError("Payee does not exist.")
+
+        # Create the transaction
+        transaction = Transaction.objects.create(
+            payer=payer,
+            payee=payee,
+            amount=amount,
+            description=description
+        )
+
+        # Serialize and return the transaction data
+        serializer = TransactionSerializer(transaction)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        
+class TransactionAPIView(APIView):
+    def get(self, request):
+        transactions = Transaction.objects.all()
+        serializer = TransactionSerializer(transactions, many=True)
+        return Response(serializer.data)
+
+    def delete(self, request, transaction_id):
+        try:
+            transaction = Transaction.objects.get(id=transaction_id)
+            transaction.delete()
+            return Response({"message": "Transaction deleted successfully"}, 
+                          status=status.HTTP_204_NO_CONTENT)
+        except Transaction.DoesNotExist:
+            return Response({"error": "Transaction not found"}, 
+                          status=status.HTTP_404_NOT_FOUND)    
+'''''''''''''''''
+
+
+#Load API keys from .env file
+load_dotenv()
+KHALTI_SECRET_KEY = os.getenv("KHALTI_SECRET_KEY")
+
+@csrf_exempt
+def verify_khalti_payment(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            token = data.get("token")  # Get token from frontend
+            amount = data.get("amount")  # Amount should be in paisa (NPR 10 = 1000 paisa)
+            print(data)
+            if not token or not amount:
+                return JsonResponse({"status": "failed", "message": "Missing token or amount"}, status=400)
+
+            # Khalti API URL for verifying payments
+            url = "https://khalti.com/api/v2/payment/verify/"
+            headers = {"Authorization": f"Key {KHALTI_SECRET_KEY}"}
+            payload = {"token": token, "amount": amount}
+
+            # Send request to Khalti for verification
+            response = requests.post(url, json=payload, headers=headers)
+            response_data = response.json()
+
+            if response.status_code == 200:
+                return JsonResponse({"status": "success", "message": "Payment Verified!", "data": response_data})
+            else:
+                return JsonResponse({"status": "failed", "message": "Payment Verification Failed!", "data": response_data}, status=400)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"status": "failed", "message": "Invalid JSON data"}, status=400)
+
+    return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
+
+
+
+# khalti payment
+# from django.http import JsonResponse
+# from django.views.decorators.csrf import csrf_exempt
+# import requests
+# import os
+# import uuid
+
+# def initiate_khalti_payment(request):
+#     """Initiate a payment request to Khalti."""
+#     if request.method == 'POST':
+#         url = "https://dev.khalti.com/api/v2/payment/initiate/"
+#         headers = {
+#             "Authorization": f"Key 63f32942f293495e81d9126a9bc6085d",
+#             "Content-Type": "application/json"
+#         }
+#         purchase_order_id = str(uuid.uuid4())  # Generates a unique order ID
+#         data_info = json.loads(request.body)
+#         data = {
+#             "return_url": "http://localhost:3001/payment/callback/",
+#             "website_url": "http://localhost:3001/",
+#             "amount": data_info.get("amount"),
+#             "purchase_order_id": purchase_order_id,
+#             "purchase_order_name": purchase_order_id+"test",
+#             "mobile": "9800000001",
+#             "product_identity": 1,
+#             "product_name": "name",
+#             "public_key": "09720e0b39a048758031c72d2adb9aa4",
+#             "transaction_pin": "1111",
+#             "customer_info": {
+#                 "name": data_info.get("name"),
+#                 "email": data_info.get("email"),
+#                 "phone": data_info.get("phone")
+#             }
+#         }
+#         response = requests.post(url, headers=headers, json=data)
+#         print(response.text)
+#         return JsonResponse(json.loads(response.json()))
+    
+#     return JsonResponse({"message": "Invalid request method."}, status=405)
+
+# def khalti_lookup_api(transaction_id):
+#     """Call Khalti Lookup API to verify transaction."""
+#     url = "https://khalti.com/api/v2/payment/lookup/"
+#     headers = {
+#         "Authorization": f"Key {os.getenv('KHALTI_SECRET_KEY')}"
+#     }
+#     data = {"transaction_id": transaction_id}
+#     response = requests.post(url, headers=headers, data=data)
+#     return response.json()
+
+# @csrf_exempt
+# def payment_success_callback(request):
+#     """Handle the payment success callback from Khalti."""
+#     if request.method == 'GET':
+#         pidx = request.GET.get('pidx')
+#         status = request.GET.get('status')
+#         transaction_id = request.GET.get('transaction_id')
+#         amount = request.GET.get('amount')
+#         mobile = request.GET.get('mobile')
+#         purchase_order_id = request.GET.get('purchase_order_id')
+#         purchase_order_name = request.GET.get('purchase_order_name')
+#         total_amount = request.GET.get('total_amount')
+        
+#         if status == "Completed":
+#             # Call lookup API for confirmation
+#             lookup_response = khalti_lookup_api(transaction_id)
+#             if lookup_response.get("status") == "Completed":
+#                 # Payment confirmed, process order or update database
+#                 return JsonResponse({"message": "Payment confirmed", "data": lookup_response}, status=200)
+#             else:
+#                 return JsonResponse({"message": "Payment lookup failed", "data": lookup_response}, status=400)
+        
+#         elif status == "Pending":
+#             return JsonResponse({"message": "Payment is still pending. Please verify later."}, status=202)
+        
+#         elif status == "User canceled":
+#             return JsonResponse({"message": "Payment was canceled by the user."}, status=400)
+        
+#         else:
+#             return JsonResponse({"message": "Unknown status received."}, status=400)
+    
+#     return JsonResponse({"message": "Invalid request method."}, status=405)

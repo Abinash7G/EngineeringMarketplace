@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from ersathi.views import CreateProduct, ServiceList, Test, get_user_profile
+from ersathi.views import CreateProduct, ServiceList, Test, get_user_profile, verify_khalti_payment
 from ersathi.views import SignupView, LoginView
 from django.urls import path, include
 from ersathi.views import ForgotPasswordView
@@ -29,7 +29,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path
 from ersathi.views import get_cart, add_to_cart, remove_from_cart, get_wishlist, add_to_wishlist, remove_from_wishlist
-from payments.views import PaymentAPI, create_payment_intent
+#from ersathi.views import  initiate_khalti_payment, payment_success_callback
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -65,9 +65,10 @@ urlpatterns = [
     path('api/wishlist/add/', add_to_wishlist, name='add_to_wishlist'),
     path('api/wishlist/remove/<int:product_id>/', remove_from_wishlist, name='remove_from_wishlist'),
     #payment
-    path('make_payment/', PaymentAPI.as_view(), name='make_payment'),
-     path('api/payment-intent/', create_payment_intent),
-
+    path('api/verify-khalti-payment/', verify_khalti_payment, name='verify_khalti_payment'),
+    #path("api/initiate-khalti-payment/", initiate_khalti_payment, name="khalti_payment"),
+    #path("api/payment-succes-callback/", payment_success_callback, name="khalti_payment_callback"),
+    
     
 ]   
 
@@ -75,3 +76,16 @@ urlpatterns = [
 # Serve media files during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+
+
+
+
+
+#payment
+    '''''''''
+    path('api/save_transaction/', TransactionCreateAPIView.as_view(), name='transaction_create'),
+    path('api/transactions/', TransactionAPIView.as_view(), name='transaction_api'),
+    path('api/transactions/<int:transaction_id>/', TransactionAPIView.as_view(), name='transaction-detail'),
+    '''''''''
