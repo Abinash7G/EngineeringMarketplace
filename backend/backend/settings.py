@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'social_django',
     'django_rest_passwordreset',
-    'payments',
+    
 
 ]
 
