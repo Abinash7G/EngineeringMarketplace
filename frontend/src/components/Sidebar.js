@@ -1,29 +1,39 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
-import { FaUsers, FaTools, FaChartBar, FaCog, FaSignOutAlt } from "react-icons/fa";
-import { Box, Typography, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Button } from "@mui/material";
+import { Link, useNavigate } from "react-router-dom";
+import { FaUsers, FaTools, FaChartBar, FaCog, FaSignOutAlt, FaCheck, FaTimes } from "react-icons/fa";
+import {
+  Box,
+  Typography,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Button,
+} from "@mui/material";
+
 
 const Sidebar = () => {
-  const navigate = useNavigate(); // Initialize navigate
+  const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('authToken');
+    localStorage.removeItem("authToken");
     alert("You have been logged out!");
-    navigate("/"); // navagiting to home page
+    navigate("/"); // navigating to home page
   };
 
   return (
     <Box
       sx={{
-        width: "250px", // Sidebar width
-        backgroundColor: "#007bff", // Sidebar background color
-        color: "white", // Sidebar text color
-        height: "100vh", // Sidebar stretches to full viewport height
+        width: "250px",
+        backgroundColor: "#007bff",
+        color: "white",
+        height: "100vh",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between", // Align logo/menu and logout button
-        position: "sticky", // Sidebar stays fixed during scroll
-        top: 0, // Position the sticky sidebar at the top
+        justifyContent: "space-between",
+        position: "sticky",
+        top: 0,
       }}
     >
       {/* Logo and Menu */}
@@ -38,7 +48,7 @@ const Sidebar = () => {
 
         <List>
           <ListItem disablePadding>
-            <ListItemButton component={Link} to="/admin/dashboard">
+            <ListItemButton component={Link} to="/admin">
               <ListItemIcon sx={{ color: "white" }}>
                 <FaChartBar />
               </ListItemIcon>
@@ -70,6 +80,25 @@ const Sidebar = () => {
                 <FaCog />
               </ListItemIcon>
               <ListItemText primary="Settings" />
+            </ListItemButton>
+          </ListItem>
+
+          {/* New Buttons for Approved & Rejected Companies */}
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/admin/rejected-companies">
+              <ListItemIcon sx={{ color: "white" }}>
+                <FaCheck />
+              </ListItemIcon>
+              <ListItemText primary="Approved Companies" />
+            </ListItemButton>
+          </ListItem>
+
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/admin/approved-companies">
+              <ListItemIcon sx={{ color: "white" }}>
+                <FaTimes />
+              </ListItemIcon>
+              <ListItemText primary="Rejected Companies" />
             </ListItemButton>
           </ListItem>
         </List>

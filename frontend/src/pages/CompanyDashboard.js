@@ -68,7 +68,7 @@ const CompanyDashboard = () => {
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Welcome, {companyName} ||  Company
+            Welcome, {companyName}
           </Typography>
           <Button color="inherit" onClick={handleLogout}>
             Logout
