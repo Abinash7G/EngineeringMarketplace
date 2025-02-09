@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from ersathi.views import CreateProduct, ServiceList, Test, get_user_profile, verify_khalti_payment
+from ersathi.views import ServiceList, Test, get_user_profile, verify_khalti_payment #CreateProduct 
 from ersathi.views import SignupView, LoginView
 from django.urls import path, include
 from ersathi.views import ForgotPasswordView
@@ -54,7 +54,7 @@ urlpatterns = [
     path('api/products/<str:category>/', get_products_by_category, name='get_products_by_category'),
     path('api/company-products/', get_company_products, name='get_company_products'),
     ##
-    path('api/products/create/', CreateProduct.as_view(), name='create_product'),
+    #path('api/products/create/', CreateProduct.as_view(), name='create_product'),
     #path('api/products/<int:pk>/', create_product, name='update_product'), 
     path('api/test/', Test.as_view(), name='create_Test'),
     #Cart
