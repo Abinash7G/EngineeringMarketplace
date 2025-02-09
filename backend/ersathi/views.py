@@ -1,7 +1,6 @@
 from ast import Load
 import token
 from django.contrib.auth.models import Group
-from django.forms import ValidationError
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -459,62 +458,87 @@ def get_company_products(request):
     return Response(serializer.data)
 
 
-#post Product from from company 
-class CreateProduct(APIView):
-    permission_classes = [AllowAny]
-    def post(self, request):
-        user = request.user
-        data = request.data
-        try:
-            # Assign company dynamically
-            company = user.company
-            category = "Renting" if "Construction" in company.company_type else "Selling"
+# #post Product from from company 
+# class CreateProduct(APIView):
+#     permission_classes = [AllowAny]
+#     def post(self, request):
+#         user = request.user
+#         data = request.data
+#         try:
+#             # Assign company dynamically
+#             company = user.company
+#             category = "Renting" if "Construction" in company.company_type else "Selling"
 
-            # Create a new product
-            product = Product.objects.create(
-                title=data['title'],
-                description=data['description'],
-                price=data['price'],
-                per_day_rent=data['per_day_rent'],
-                image=data.get('image'),
-                discount_percentage=data['discount_percentage'],
-                category=category,
-                company=company,
-                is_available=data['is_available'],
-            )
-            serializer = ProductSerializer(product)
-            return Response(serializer.data, status=201)
-        except Exception as e:
-            return Response({"error": str(e)}, status=500)
+#             # Create a new product
+#             product = Product.objects.create(
+#                 title=data['title'],
+#                 description=data['description'],
+#                 price=data['price'],
+#                 per_day_rent=data['per_day_rent'],
+#                 image=data.get('image'),
+#                 discount_percentage=data['discount_percentage'],
+#                 category=category,
+#                 company=company,
+#                 is_available=data['is_available'],
+#             )
+#             serializer = ProductSerializer(product)
+#             return Response(serializer.data, status=201)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=500)
 
-        
-#post Product from from company 
+from decimal import Decimal
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import Product
+
 class Test(APIView):
     permission_classes = [IsAuthenticated]
+
     def post(self, request):
         user = request.user
+
+        # 1) Check if user has a company
+        company = getattr(user, "company", None)
+        if company is None:
+            return Response({"error": "This user has no associated company."}, status=400)
+
+        # 2) Make sure the company_type field is set
+        if not company.company_type:
+            return Response({"error": "Company type is not set for this company."}, status=400)
+
+        # 3) Decide category based on company_type
+        if "Construction" in company.company_type:
+            category = "Renting"
+        else:
+            category = "Selling"
+
+        # 4) We'll read form fields from request.data, but the file from request.FILES.
         data = request.data
-    
-            # Assign company dynamically
-        company = user.company
-        category = "Renting" if "Construction" in company.company_type else "Selling"
+        image_file = request.FILES.get("image")  # the uploaded file
 
-        # Create a new product
-        from decimal import Decimal
-
+        # 5) Create the new product
+        # Note: if data["discountPercentage"] is empty, cast it to None
+        discount_value = None
+        if data.get("discountPercentage"):
+            discount_value = Decimal(data["discountPercentage"])
+        # Convert 'isAvailable' string to boolean
+        is_available = data.get("isAvailable", "false").lower() == "true"
         product = Product.objects.create(
-        title=data['title'],
-        description=data['description'],
-        price=Decimal(data['price']),
-        per_day_rent=Decimal(data['perDayRent']),
-        discount_percentage=Decimal(data['discountPercentage']) if data['discountPercentage'] else None,
-        category=category,
-        company=company,
-        is_available=data['isAvailable'],
+            title=data["title"],
+            description=data["description"],
+            price=Decimal(data["price"]),
+            per_day_rent=Decimal(data["perDayRent"]),
+            discount_percentage=discount_value,
+            image=image_file,  # pass the file here
+            category=category,
+            company=company,
+            is_available=is_available,
+            
         )
 
-        return Response({},status=201)
-    
+        return Response({"message": "Product created successfully"}, status=201)
+
 
        
             
