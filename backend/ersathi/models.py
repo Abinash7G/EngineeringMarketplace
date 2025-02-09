@@ -1,6 +1,8 @@
+from decimal import Decimal
 from django.db import models
 import uuid
 from django.contrib.auth.models import AbstractUser
+from django.forms import ValidationError
 
 # Service Model
 class Service(models.Model):
@@ -98,3 +100,150 @@ class Wishlist(models.Model):
 
     class Meta:
         unique_together = ('user', 'product')  # Ensure a product is added only once per user
+
+
+
+###########
+#Payment#
+"""
+class EWallet(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='ewallet')
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=3000.00)  # Default balance is 3000
+
+    def _str_(self):
+        return f"{self.user.username}'s E-Wallet"
+
+    def transfer_balance(self, payee, amount):
+       / Transfer balance from this user's wallet to another user's wallet./
+        if self.balance >= amount:
+            # Subtract from payer (this user)
+            self.balance -= amount
+            self.save()
+
+            # Add to payee's wallet
+            payee_wallet = EWallet.objects.get(user=payee)
+            payee_wallet.balance += amount
+            payee_wallet.save()
+
+            return True
+        return False
+
+    def get_balance(self):
+        /Return the current balance./
+        return self.balance
+    
+class Transaction(models.Model):
+    payer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='transactions_made')
+    payee = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='transactions_received')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=255, null=True, blank=True)  # Optional description for the transaction
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed')
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    admin_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:  # Only on creation
+            # Calculate 3% commission
+            fee_percentage = Decimal('0.03')
+            self.admin_commission = self.amount * fee_percentage
+            self.status = 'completed'  # Set to completed when payment is successful
+        super().save(*args, **kwargs)
+
+    def _str_(self):
+        return f"Transaction of {self.amount} from {self.payer.username} to {self.payee.username}"
+
+    class Meta:
+        ordering = ['-date']
+
+    def save(self, *args, **kwargs):
+        //Override the save method to handle balance transfer.//
+        print("Starting transaction save process...")
+
+        # Ensure payer and payee are valid users
+        if not self.payer or not self.payee:
+            print("Payer or payee is missing.")
+            raise ValidationError("Payer and payee must be valid users.")
+
+        # Ensure payer and payee are not the same
+        if self.payer == self.payee:
+            print("Payer and payee are the same.")
+            raise ValidationError("Payer and payee cannot be the same.")
+
+        # Convert amount to Decimal (if it's not already)
+        try:
+            self.amount = Decimal(str(self.amount))  # Convert to string first, then to Decimal
+        except (TypeError, ValueError):
+            print("Invalid amount value.")
+            raise ValidationError("Amount must be a valid number.")
+
+        # Ensure the amount is positive
+        if self.amount <= Decimal('0'):  # Compare with Decimal('0')
+            print("Amount is not positive.")
+            raise ValidationError("Amount must be greater than zero.")
+
+        # Get the payer's e-wallet
+        try:
+            payer_wallet = EWallet.objects.get(user=self.payer)
+            print(f"Payer's wallet found with balance: {payer_wallet.balance}")
+        except EWallet.DoesNotExist:
+            print(f"Payer {self.payer.username} does not have an e-wallet.")
+            raise ValidationError(f"Payer {self.payer.username} does not have an e-wallet.")
+
+        # Get the payee's e-wallet
+        try:
+            payee_wallet = EWallet.objects.get(user=self.payee)
+            print(f"Payee's wallet found with balance: {payee_wallet.balance}")
+        except EWallet.DoesNotExist:
+            print(f"Payee {self.payee.username} does not have an e-wallet.")
+            raise ValidationError(f"Payee {self.payee.username} does not have an e-wallet.")
+
+        # Get the admin's e-wallet
+        try:
+            admin_user = CustomUser.objects.get(username="admin")  # Replace "admin" with the actual admin username
+            admin_wallet = EWallet.objects.get(user=admin_user)
+            print(f"Admin's wallet found with balance: {admin_wallet.balance}")
+        except CustomUser.DoesNotExist:
+            print("Admin user does not exist.")
+            raise ValidationError("Admin user does not exist.")
+        except EWallet.DoesNotExist:
+            print("Admin does not have an e-wallet.")
+            raise ValidationError("Admin does not have an e-wallet.")
+
+        # Calculate 3% of the transaction amount
+        fee_percentage = Decimal('0.03')  # 3%
+        fee_amount = self.amount * fee_percentage
+        remaining_amount = self.amount - fee_amount
+
+        # Check if the payer has sufficient balance
+        if payer_wallet.balance < self.amount:
+            print(f"Insufficient balance in {self.payer.username}'s e-wallet.")
+            raise ValidationError(f"Insufficient balance in {self.payer.username}'s e-wallet.")
+
+        # Perform the balance transfer
+        print(f"Transferring {self.amount} from {self.payer.username} to {self.payee.username}...")
+
+        # Deduct the full amount from the payer
+        payer_wallet.balance -= self.amount
+
+        # Add the fee amount to the admin's wallet
+        admin_wallet.balance += fee_amount
+
+        # Add the remaining amount to the payee's wallet
+        payee_wallet.balance += remaining_amount
+
+        # Save the updated wallets
+        payer_wallet.save()
+        admin_wallet.save()
+        payee_wallet.save()
+        print("Balance transfer successful.")
+
+        # Save the transaction
+        super().save(*args, **kwargs)
+        print("Transaction saved successfully.")
+
+"""
