@@ -26,7 +26,8 @@ import ProfileSettings from './components/ProfileSettings';
 import KhaltiButton from './components/KhaltiButton';
 //import PaymentSuccess from './components/PaymentSuccess';
 //import KhaltiPayment from './components/KhaltiPayment';
-
+import ApprovedCompanies from './components/ApprovedCompanies';
+import RejectedCompanies  from './components/RejectedCompanies';
 
 
 
@@ -67,6 +68,8 @@ const App = () => {
 {/*
         <Route path="/khalti1" element={<KhaltiPayment />} />
         <Route path="/payment/callback" element={<PaymentSuccess />} /> */}
+        <Route path="/admin/rejected-companies" element={<ApprovedCompanies/>} /> 
+        <Route path="/admin/approved-companies" element={<RejectedCompanies/>} /> 
 
         
         

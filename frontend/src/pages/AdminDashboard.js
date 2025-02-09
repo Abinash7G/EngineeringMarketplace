@@ -42,7 +42,7 @@ const AdminDashboard = () => {
 
         // Filter out unapproved companies.
         const unapprovedCompanies = allCompanies.filter(
-          (company) => !company.is_approved
+          (company) => !company.is_approved && !company.is_rejected
         );
 
         // Filter approved companies that include Safety Training module (assumed id = 5).

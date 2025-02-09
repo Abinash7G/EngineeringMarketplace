@@ -68,7 +68,6 @@ const MaterialsManagement = () => {
     price: "",
     perDayRent: "",
     discountPercentage: "",
-    
     category: "Renting",
     company: "",
     isAvailable: true,
@@ -80,61 +79,83 @@ const MaterialsManagement = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0]; // Access the uploaded file
     setNewMaterial((prevMaterial) => ({
-        ...prevMaterial,
-        image: file, // Update the image in the state
+      ...prevMaterial,
+      image: file, // Update the image in the state
     }));
-};
-const handleChange = (e) => {
+  };
+
+  const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setNewMaterial((prevMaterial) => ({
-        ...prevMaterial,
-        [name]: type === "checkbox" ? checked : value,
+      ...prevMaterial,
+      [name]: type === "checkbox" ? checked : value,
     }));
-};
+  };
 
-
+  // *** Only changed handleAddMaterial to send multipart/form-data ***
   const handleAddMaterial = async () => {
-    // Set category dynamically
+    // Dynamically set category
     const updatedMaterial = {
-        ...newMaterial,
-        category: companyName.includes("Construction") ? "Renting" : "Selling",
-        company: companyName, // Automatically assign company from login
-        createdAt: new Date().toLocaleString(),
+      ...newMaterial,
+      category: companyName.includes("Construction") ? "Renting" : "Selling",
+      company: companyName,
+      createdAt: new Date().toLocaleString(),
     };
-    console.log(updatedMaterial);
+    console.log(updatedMaterial); // Just to see what we're sending
+
     try {
-        // Send data to the backend
-        const response = await API.post('/api/test/',updatedMaterial);
+      // 1) Build FormData to handle file + other fields
+      const formData = new FormData();
+      formData.append("title", updatedMaterial.title);
+      formData.append("description", updatedMaterial.description);
+      formData.append("price", updatedMaterial.price);
+      formData.append("perDayRent", updatedMaterial.perDayRent);
+      formData.append("discountPercentage", updatedMaterial.discountPercentage || "");
+      formData.append("category", updatedMaterial.category);
+      formData.append("company", updatedMaterial.company);
+      formData.append("createdAt", updatedMaterial.createdAt);
+      formData.append("isAvailable", updatedMaterial.isAvailable);
 
-        if (response.status === 200) {
-            const addedMaterial = await response.json();
-            setMaterials([...materials, addedMaterial]);
-            handleClose();
-        } else {
-            console.error("Failed to add material.");
-        }
+      // If user selected a file, append it
+      if (updatedMaterial.image) {
+        formData.append("image", updatedMaterial.image, updatedMaterial.image.name);
+      }
+
+      // 2) POST to /api/test/ using multipart/form-data
+      const response = await API.post("/api/test/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      // 3) With Axios, use response.data
+      if (response.status === 200 || response.status === 201) {
+        const addedMaterial = response.data;
+        setMaterials([...materials, addedMaterial]);
+        handleClose();
+      } else {
+        console.error("Failed to add material. Status:", response.status);
+      }
     } catch (error) {
-        console.error("Error:", error);
+      console.error("Error:", error);
     }
-};
+  };
 
-useEffect(() => {
+  // Fetch existing materials from the backend
+  useEffect(() => {
     const fetchMaterials = async () => {
-        try {
-            const response = await fetch('/api/company-products/');
-            if (response.ok) {
-                const data = await response.json();
-                setMaterials(data);
-            } else {
-                console.error("Failed to fetch materials.");
-            }
-        } catch (error) {
-            console.error("Error:", error);
+      try {
+        const response = await fetch("/api/company-products/");
+        if (response.ok) {
+          const data = await response.json();
+          setMaterials(data);
+        } else {
+          console.error("Failed to fetch materials.");
         }
+      } catch (error) {
+        console.error("Error:", error);
+      }
     };
     fetchMaterials();
-}, []);
-
+  }, []);
 
   const handleDeleteMaterial = (id) => {
     setMaterials(materials.filter((material) => material.id !== id));
@@ -184,7 +205,10 @@ useEffect(() => {
                   <IconButton color="primary">
                     <Edit />
                   </IconButton>
-                  <IconButton color="secondary" onClick={() => handleDeleteMaterial(material.id)}>
+                  <IconButton
+                    color="secondary"
+                    onClick={() => handleDeleteMaterial(material.id)}
+                  >
                     <Delete />
                   </IconButton>
                 </TableCell>

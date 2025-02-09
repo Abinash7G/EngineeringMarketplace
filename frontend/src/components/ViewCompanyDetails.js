@@ -14,18 +14,18 @@ import {
 import { CheckCircleOutline, CancelOutlined } from "@mui/icons-material";
 
 const ViewCompanyDetails = () => {
-  const { id } = useParams(); // Get company ID from the route
+  const { id } = useParams();            // Get company ID from the route (e.g., /view-company-details/8)
   const navigate = useNavigate();
   const [companyDetails, setCompanyDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch company details
+    // Fetch the full details of a single company
     API.get(`/company-registration/${id}/`)
       .then((response) => {
-        setCompanyDetails(response.data); // Set company details
-        setLoading(false); // Stop loading
+        setCompanyDetails(response.data);
+        setLoading(false);
       })
       .catch((err) => {
         console.error("Error fetching company details:", err.response || err.message);
@@ -34,10 +34,12 @@ const ViewCompanyDetails = () => {
       });
   }, [id]);
 
+  // Approve button handler
   const handleApprove = () => {
     API.post(`/approve-company/${id}/`)
       .then(() => {
         alert("Company approved successfully!");
+        // After approving, go back to the admin dashboard
         navigate("/admin-dashboard");
       })
       .catch((err) => {
@@ -46,10 +48,12 @@ const ViewCompanyDetails = () => {
       });
   };
 
+  // Reject button handler
   const handleReject = () => {
     API.post(`/reject-company/${id}/`)
       .then(() => {
         alert("Company rejected successfully!");
+        // After rejecting, go back to the admin dashboard
         navigate("/admin-dashboard");
       })
       .catch((err) => {
@@ -58,6 +62,7 @@ const ViewCompanyDetails = () => {
       });
   };
 
+  // While data is loading
   if (loading) {
     return (
       <Box
@@ -73,6 +78,7 @@ const ViewCompanyDetails = () => {
     );
   }
 
+  // If there's an error (e.g. company not found)
   if (error) {
     return (
       <Box
@@ -90,9 +96,9 @@ const ViewCompanyDetails = () => {
     );
   }
 
+  // Render the company details page
   return (
     <Box sx={{ padding: "40px" }}>
-      {/* Company Details Card */}
       <Paper
         sx={{
           padding: "30px",
@@ -135,9 +141,7 @@ const ViewCompanyDetails = () => {
             <Typography variant="h6">
               <b>Company Name:</b>
             </Typography>
-            <Typography variant="body1">
-              {companyDetails.company_name}
-            </Typography>
+            <Typography variant="body1">{companyDetails.company_name}</Typography>
           </Grid>
 
           <Grid item xs={12} sm={6}>
@@ -179,7 +183,7 @@ const ViewCompanyDetails = () => {
 
         <Divider sx={{ margin: "30px 0" }} />
 
-        {/* Action Buttons */}
+        {/* Approve / Reject Buttons */}
         <Box
           sx={{
             display: "flex",
