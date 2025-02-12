@@ -24,13 +24,11 @@ import { Edit, Delete } from "@mui/icons-material";
 import API from "../services/api";
 
 const MaterialsManagement = () => {
-  // Mocking the company name from the login session
   const [companyName, setCompanyName] = useState("");
 
-  // Simulate retrieving the company name on login
   useEffect(() => {
-    // Replace with actual API call or session context retrieval
-    const loggedInCompany = "Boy Construction"; // Example logged-in company
+    // Simulate retrieving the company name on login
+    const loggedInCompany = "Boy Construction"; 
     setCompanyName(loggedInCompany);
   }, []);
 
@@ -62,25 +60,31 @@ const MaterialsManagement = () => {
   ]);
 
   const [open, setOpen] = useState(false);
+
+  // *** 1) Make category default to empty (so the user must pick) ***
   const [newMaterial, setNewMaterial] = useState({
     title: "",
     description: "",
     price: "",
+    category: "",
     perDayRent: "",
     discountPercentage: "",
-    category: "Renting",
     company: "",
     isAvailable: true,
   });
 
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    setOpen(false);
+    // Optionally reset form here if you like:
+    // setNewMaterial({...initialState});
+  };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0]; // Access the uploaded file
+    const file = e.target.files[0];
     setNewMaterial((prevMaterial) => ({
       ...prevMaterial,
-      image: file, // Update the image in the state
+      image: file,
     }));
   };
 
@@ -92,54 +96,50 @@ const MaterialsManagement = () => {
     }));
   };
 
-  // *** Only changed handleAddMaterial to send multipart/form-data ***
+  // *** 2) Updated handleAddMaterial for validation + no auto‐set of category ***
   const handleAddMaterial = async () => {
-    // Dynamically set category
-    const updatedMaterial = {
+    if (!newMaterial.title || !newMaterial.description || !newMaterial.price || !newMaterial.category) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+  
+    let updatedMaterial = {
       ...newMaterial,
-      category: companyName.includes("Construction") ? "Renting" : "Selling",
-      company: companyName,
-      createdAt: new Date().toLocaleString(),
+      category: newMaterial.category.toLowerCase(),  // Ensure category is lowercase
+      perDayRent: newMaterial.category === "Selling" ? "0" : newMaterial.perDayRent || "0",
     };
-    console.log(updatedMaterial); // Just to see what we're sending
-
+  
+    const formData = new FormData();
+    formData.append("title", updatedMaterial.title);
+    formData.append("description", updatedMaterial.description);
+    formData.append("price", updatedMaterial.price);
+    formData.append("category", updatedMaterial.category);
+    formData.append("perDayRent", updatedMaterial.perDayRent);
+    formData.append("discountPercentage", updatedMaterial.discountPercentage || "0");
+    formData.append("company", updatedMaterial.company);
+    formData.append("isAvailable", updatedMaterial.isAvailable);
+  
+    if (updatedMaterial.image) {
+      formData.append("image", updatedMaterial.image, updatedMaterial.image.name);
+    }
+  
+    console.log("Sending request:", Object.fromEntries(formData.entries()));
+  
     try {
-      // 1) Build FormData to handle file + other fields
-      const formData = new FormData();
-      formData.append("title", updatedMaterial.title);
-      formData.append("description", updatedMaterial.description);
-      formData.append("price", updatedMaterial.price);
-      formData.append("perDayRent", updatedMaterial.perDayRent);
-      formData.append("discountPercentage", updatedMaterial.discountPercentage || "");
-      formData.append("category", updatedMaterial.category);
-      formData.append("company", updatedMaterial.company);
-      formData.append("createdAt", updatedMaterial.createdAt);
-      formData.append("isAvailable", updatedMaterial.isAvailable);
-
-      // If user selected a file, append it
-      if (updatedMaterial.image) {
-        formData.append("image", updatedMaterial.image, updatedMaterial.image.name);
-      }
-
-      // 2) POST to /api/test/ using multipart/form-data
       const response = await API.post("/api/test/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
-      // 3) With Axios, use response.data
-      if (response.status === 200 || response.status === 201) {
-        const addedMaterial = response.data;
-        setMaterials([...materials, addedMaterial]);
+  
+      if (response.status === 201) {
+        setMaterials([...materials, response.data]);
         handleClose();
-      } else {
-        console.error("Failed to add material. Status:", response.status);
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Failed to add material:", error.response?.data || error);
+      alert("Error: Failed to add material. Check server logs.");
     }
   };
-
-  // Fetch existing materials from the backend
+  
   useEffect(() => {
     const fetchMaterials = async () => {
       try {
@@ -167,12 +167,10 @@ const MaterialsManagement = () => {
         Manage Materials
       </Typography>
 
-      {/* Add Material Button */}
       <Button variant="contained" color="primary" onClick={handleOpen}>
         Add New Material
       </Button>
 
-      {/* Materials Table */}
       <TableContainer component={Paper} sx={{ mt: 4 }}>
         <Table>
           <TableHead>
@@ -180,7 +178,6 @@ const MaterialsManagement = () => {
               <TableCell>Title</TableCell>
               <TableCell>Category</TableCell>
               <TableCell>Price</TableCell>
-              <TableCell>Per Day Rent</TableCell>
               <TableCell>Discount (%)</TableCell>
               <TableCell>Company</TableCell>
               <TableCell>Is Available</TableCell>
@@ -192,8 +189,8 @@ const MaterialsManagement = () => {
             {materials.map((material) => (
               <TableRow key={material.id}>
                 <TableCell>{material.title}</TableCell>
-                <TableCell>{material.category}</TableCell>
                 <TableCell>{material.price}</TableCell>
+                <TableCell>{material.category}</TableCell>
                 <TableCell>{material.perDayRent}</TableCell>
                 <TableCell>{material.discountPercentage}</TableCell>
                 <TableCell>{material.company}</TableCell>
@@ -218,7 +215,6 @@ const MaterialsManagement = () => {
         </Table>
       </TableContainer>
 
-      {/* Add/Edit Material Dialog */}
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Add New Material</DialogTitle>
         <DialogContent>
@@ -246,6 +242,24 @@ const MaterialsManagement = () => {
             value={newMaterial.price}
             onChange={handleChange}
           />
+
+          {/* 3) Category starts blank, user must pick Renting or Selling */}
+          <Select
+            name="category"
+            fullWidth
+            margin="normal"
+            value={newMaterial.category}
+            onChange={handleChange}
+            displayEmpty
+          >
+            <MenuItem value="">
+              <em>Select Category</em>
+            </MenuItem>
+            <MenuItem value="Renting">Renting</MenuItem>
+            <MenuItem value="Selling">Selling</MenuItem>
+          </Select>
+
+          {/* 4) If category is Selling, disable Per Day Rent */}
           <TextField
             label="Per Day Rent"
             name="perDayRent"
@@ -253,7 +267,9 @@ const MaterialsManagement = () => {
             margin="normal"
             value={newMaterial.perDayRent}
             onChange={handleChange}
+            disabled={newMaterial.category === "Selling"}
           />
+
           <TextField
             label="Discount Percentage"
             name="discountPercentage"
@@ -262,29 +278,22 @@ const MaterialsManagement = () => {
             value={newMaterial.discountPercentage}
             onChange={handleChange}
           />
+
           <Typography variant="body1" gutterBottom>
             Image:
           </Typography>
           <input type="file" onChange={handleFileChange} />
-          <Select
-            label="Category"
-            name="category"
-            fullWidth
-            margin="normal"
-            value={newMaterial.category}
-            onChange={handleChange}
-          >
-            <MenuItem value="Renting">Renting</MenuItem>
-            <MenuItem value="Selling">Selling</MenuItem>
-          </Select>
+
+          {/* 5) Company is read-only, from logged in user */}
           <TextField
             label="Company"
             name="company"
             fullWidth
             margin="normal"
-            value={companyName} // Set to logged-in company
-            disabled // Make it non-editable
+            value={companyName}
+            disabled
           />
+
           <Checkbox
             name="isAvailable"
             checked={newMaterial.isAvailable}

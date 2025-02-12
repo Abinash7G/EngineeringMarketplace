@@ -29,7 +29,10 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
 
     fetchProducts();
   }, []);
-
+  const categoryLabels = {
+    renting: "Rent",
+    selling: "Buy",
+  };
   const handleSortChange = (event) => {
     const option = event.target.value;
     setSortOption(option);
@@ -94,7 +97,7 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                   fontWeight: "bold",
                 }}
               >
-                {product.category === "renting" ? "Rent" : "Sell"}
+                {categoryLabels[product.category] || "Unknown"}
               </Box>
 
               <Box

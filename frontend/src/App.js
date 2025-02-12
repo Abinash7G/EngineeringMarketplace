@@ -32,6 +32,7 @@ import RejectedCompanies  from './components/RejectedCompanies';
 
 
 
+
 const App = () => {
   const location = useLocation(); // Correct hook name
   const navbarRoutes = ["/","/home", "/login", "/signup", "/companyregistration"];
@@ -56,6 +57,8 @@ const App = () => {
         <Route path="/CDproduct" element={<CDProduct/>} />
         <Route path="/client/cart" element={<Cart/>}/>
         <Route path="/client/wishlist" element={<Wishlist/>} />
+        
+
         
         <Route path="/checkout" element={<CDCheckoutForm/>}/>
         <Route path="/appointments" element={<Appointments/>} />
