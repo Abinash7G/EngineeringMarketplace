@@ -28,7 +28,7 @@ import KhaltiButton from './components/KhaltiButton';
 //import KhaltiPayment from './components/KhaltiPayment';
 import ApprovedCompanies from './components/ApprovedCompanies';
 import RejectedCompanies  from './components/RejectedCompanies';
-
+import CDRentVerificationform from './components/CDRentVerificationform';
 
 
 
@@ -57,7 +57,7 @@ const App = () => {
         <Route path="/CDproduct" element={<CDProduct/>} />
         <Route path="/client/cart" element={<Cart/>}/>
         <Route path="/client/wishlist" element={<Wishlist/>} />
-        
+        <Route path="/upload-kyc" element={<CDRentVerificationform/>}/>
 
         
         <Route path="/checkout" element={<CDCheckoutForm/>}/>
