@@ -92,6 +92,8 @@ class SignupView(APIView):
 
         user = CustomUser.objects.create_user(
             username=data.get('username'),
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name'),
             email=data.get('email'),
             password=data.get('password'),
             phone_number=data.get('phoneNumber'),
@@ -503,44 +505,46 @@ class Test(APIView):
         if company is None:
             return Response({"error": "This user has no associated company."}, status=400)
 
-        # 2) Make sure the company_type field is set
-        if not company.company_type:
-            return Response({"error": "Company type is not set for this company."}, status=400)
-
-        # 3) Decide category based on company_type
-        if "Construction" in company.company_type:
-            category = "Renting"
-        else:
-            category = "Selling"
-
-        # 4) We'll read form fields from request.data, but the file from request.FILES.
+        # 2) Read category from request instead of forcing it
         data = request.data
-        image_file = request.FILES.get("image")  # the uploaded file
+        category = data.get("category", "").lower()  # Ensure lowercase consistency
 
-        # 5) Create the new product
-        # Note: if data["discountPercentage"] is empty, cast it to None
-        discount_value = None
-        if data.get("discountPercentage"):
-            discount_value = Decimal(data["discountPercentage"])
-        # Convert 'isAvailable' string to boolean
+        # 3) Validate category
+        if category not in ["selling", "renting"]:
+            return Response({"error": "Invalid category. Must be 'Selling' or 'Renting'."}, status=400)
+
+        # 4) Read the uploaded file
+        image_file = request.FILES.get("image")
+
+        # 5) Convert 'discountPercentage' to Decimal (handle empty case)
+        discount_value = Decimal(data.get("discountPercentage", "0"))  # Default to 0
+
+        # 6) Convert 'isAvailable' string to boolean
         is_available = data.get("isAvailable", "false").lower() == "true"
+
+        # 7) Handle per_day_rent properly
+        per_day_rent = None
+        if category == "renting":
+            try:
+                per_day_rent = Decimal(data.get("perDayRent", "0"))  # Default to 0 if missing
+            except:
+                return Response({"error": "Invalid perDayRent value."}, status=400)
+
+        # 8) Create the new product
         product = Product.objects.create(
             title=data["title"],
             description=data["description"],
             price=Decimal(data["price"]),
-            per_day_rent=Decimal(data["perDayRent"]),
+            category=category,  # Now using frontend category
+            per_day_rent=per_day_rent,  # Allow NULL for "Selling"
             discount_percentage=discount_value,
-            image=image_file,  # pass the file here
-            category=category,
+            image=image_file,  # Handle file
             company=company,
             is_available=is_available,
-            
         )
 
         return Response({"message": "Product created successfully"}, status=201)
 
-
-       
             
         
             
