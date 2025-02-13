@@ -101,6 +101,34 @@ class Wishlist(models.Model):
     class Meta:
         unique_together = ('user', 'product')  # Ensure a product is added only once per user
 
+########
+##RentVerification Model
+#########
+
+from django.db import models
+
+class RentVerification(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('verified', 'Verified'),
+        ('rejected', 'Rejected')
+    ]
+    
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20)
+    address = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    admin_notes = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.full_name} - {self.status}"
+
+class VerificationImage(models.Model):
+    verification = models.ForeignKey(RentVerification, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='rent_verifications/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
 
 ###########

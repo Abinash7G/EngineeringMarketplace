@@ -1,6 +1,8 @@
 from ast import Load
 import token
+from typing import Generic
 from django.contrib.auth.models import Group
+from django.forms import ValidationError
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -13,7 +15,7 @@ from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 
 
-from .models import Company
+from .models import Company 
 from .serializers import CompanyRegistrationSerializer
 from rest_framework.decorators import api_view
 
@@ -546,11 +548,80 @@ class Test(APIView):
         return Response({"message": "Product created successfully"}, status=201)
 
             
+# ########
+# ##RentVerification view
+# #########        
+# # views.py
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.core.mail import send_mail
+from django.conf import settings
+from .models import RentVerification
+from .serializers import RentVerificationSerializer
+
+class RentVerificationCreateView(generics.CreateAPIView):
+    queryset = RentVerification.objects.all()
+    serializer_class = RentVerificationSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def create(self, request, *args, **kwargs):
+        # Prepare the data including multiple images
+        data = {
+            'full_name': request.data.get('full_name'),
+            'email': request.data.get('email'),
+            'phone': request.data.get('phone'),
+            'address': request.data.get('address'),
+            'uploaded_images': request.FILES.getlist('images')
+        }
         
-            
-         
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
         
-    
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class RentVerificationAdminView(generics.UpdateAPIView):
+    queryset = RentVerification.objects.all()
+    serializer_class = RentVerificationSerializer
+
+    def update(self, request, *args, **kwargs):
+        verification = self.get_object()
+        new_status = request.data.get('status')
+        admin_notes = request.data.get('admin_notes', '')
+        
+        if new_status not in ['verified', 'rejected']:
+            return Response(
+                {'error': 'Invalid status'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        verification.status = new_status
+        verification.admin_notes = admin_notes
+        verification.save()
+        
+        # Send email notification
+        subject = f'Rent Verification {new_status.title()}'
+        message = f"""
+        Dear {verification.full_name},
+        
+        Your rent verification request has been {new_status}.
+        
+        {f'Admin Notes: {admin_notes}' if admin_notes else ''}
+        
+        {'You may submit a new verification request if needed.' if new_status == 'rejected' else 'Thank you for using our service.'}
+        """
+        
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [verification.email],
+            fail_silently=False,
+        )
+        
+        return Response(self.get_serializer(verification).data)
+
 
 
 

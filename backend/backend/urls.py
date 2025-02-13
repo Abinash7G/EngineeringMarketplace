@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from ersathi.views import ServiceList, Test, get_user_profile, verify_khalti_payment #CreateProduct 
+from ersathi.views import  RentVerificationAdminView, RentVerificationCreateView, ServiceList, Test, get_user_profile, verify_khalti_payment #CreateProduct 
 from ersathi.views import SignupView, LoginView
 from django.urls import path, include
 from ersathi.views import ForgotPasswordView
@@ -30,6 +30,7 @@ from django.conf.urls.static import static
 from django.urls import path
 from ersathi.views import get_cart, add_to_cart, remove_from_cart, get_wishlist, add_to_wishlist, remove_from_wishlist
 #from ersathi.views import  initiate_khalti_payment, payment_success_callback
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -69,6 +70,8 @@ urlpatterns = [
     #path("api/initiate-khalti-payment/", initiate_khalti_payment, name="khalti_payment"),
     #path("api/payment-succes-callback/", payment_success_callback, name="khalti_payment_callback"),
     
+    path('api/rent-verification/', RentVerificationCreateView.as_view(), name='create-verification'),
+    path('api/rent-verification/<int:pk>/admin/', RentVerificationAdminView.as_view(), name='admin-verification'),
     
 ]   
 
