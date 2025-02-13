@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   TextField,
@@ -9,21 +9,52 @@ import {
   Grid,
   InputLabel,
   Avatar,
+  Alert
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import API from "../services/api";
 
-const CDRentVerificationform = ({ title, onSubmit }) => {
+const CDRentVerificationForm = ({ title }) => {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
     address: "",
-    document: null,
+    documents: [],
   });
 
-  const [verificationStatus, setVerificationStatus] = useState("pending"); // "pending" | "failed" | "verified"
+  const [verificationStatus, setVerificationStatus] = useState("pending");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await API.get("/api/user-profile/");
+        const data = response.data;
+
+        if (data) {
+          setFormData((prev) => ({
+            ...prev,
+            fullName: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
+            email: data.email || "",
+            phone: data.phone_number || "",
+          }));
+          setIsLoading(false);
+          setErrorMessage("");
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        setErrorMessage("Error loading profile. Please try again.");
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,146 +62,198 @@ const CDRentVerificationform = ({ title, onSubmit }) => {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) {
-      setErrorMessage("Uploading a license or citizenship is required!");
+    const files = Array.from(e.target.files);
+    const validExtensions = ["image/jpeg", "image/png", "image/jpg"];
+    const filteredFiles = files.filter(file => validExtensions.includes(file.type));
+
+    if (filteredFiles.length === 0) {
+      setErrorMessage("Only image files (JPG, JPEG, PNG) are allowed.");
       return;
     }
 
-    setFormData((prev) => ({ ...prev, document: file }));
-    setErrorMessage(""); // Clear error if file is uploaded
+    setFormData((prev) => ({
+      ...prev,
+      documents: [...prev.documents, ...filteredFiles],
+    }));
+    setErrorMessage("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.document) {
-      setErrorMessage("Please upload a license or citizenship document before submitting.");
+    if (formData.documents.length === 0) {
+      setErrorMessage("Please upload at least one image before submitting.");
       return;
     }
 
-    // Simulate verification process
-    const isVerified = Math.random() > 0.3; // 70% chance of success
-    if (isVerified) {
-      setVerificationStatus("verified");
-      alert("Profile verified successfully! ✅");
-      onSubmit(formData);
-    } else {
-      setVerificationStatus("failed");
-      setErrorMessage("Verification failed. Please upload a valid document and try again.");
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append("full_name", formData.fullName);
+      formDataToSend.append("email", formData.email);
+      formDataToSend.append("phone", formData.phone);
+      formDataToSend.append("address", formData.address);
+
+      formData.documents.forEach((file) => {
+        formDataToSend.append("images", file);
+      });
+
+      await API.post("/api/rent-verification/", formDataToSend, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setVerificationStatus("pending");
+      setErrorMessage("");
+      alert("Verification request submitted! ✅ Admin will review it.");
+    } catch (error) {
+      console.error("Error submitting verification request:", error);
+      setErrorMessage("Submission failed. Please try again.");
     }
   };
 
-  const handleRetry = () => {
-    setVerificationStatus("pending");
-    setErrorMessage("");
-    setFormData((prev) => ({ ...prev, document: null })); // Clear the file input
-  };
+  const renderForm = () => (
+    <form onSubmit={handleSubmit}>
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <TextField
+            label="Full Name"
+            name="fullName"
+            variant="outlined"
+            fullWidth
+            required
+            value={formData.fullName}
+            disabled
+          />
+        </Grid>
+
+        <Grid item xs={12}>
+          <TextField
+            label="Email"
+            name="email"
+            type="email"
+            variant="outlined"
+            fullWidth
+            required
+            value={formData.email}
+            disabled
+          />
+        </Grid>
+
+        <Grid item xs={12}>
+          <TextField
+            label="Phone Number"
+            name="phone"
+            type="tel"
+            variant="outlined"
+            fullWidth
+            required
+            value={formData.phone}
+            disabled
+          />
+        </Grid>
+
+        <Grid item xs={12}>
+          <TextField
+            label="Detail Address"
+            name="address"
+            variant="outlined"
+            fullWidth
+            required
+            multiline
+            rows={2}
+            value={formData.address}
+            onChange={handleChange}
+          />
+        </Grid>
+
+        <Grid item xs={12}>
+          <InputLabel sx={{ fontWeight: "bold", marginBottom: "5px" }}>
+            Upload Images (Required)
+          </InputLabel>
+          <Button
+            variant="contained"
+            component="label"
+            color="primary"
+            startIcon={<UploadFileIcon />}
+            fullWidth
+          >
+            Choose Files
+            <input
+              type="file"
+              hidden
+              onChange={handleFileChange}
+              accept=".jpg, .jpeg, .png"
+              multiple
+            />
+          </Button>
+          <Box sx={{ display: "flex", flexWrap: "wrap", marginTop: "10px" }}>
+            {formData.documents.map((file, index) => (
+              <img
+                key={index}
+                src={URL.createObjectURL(file)}
+                alt={`preview-${index}`}
+                width={80}
+                height={80}
+                style={{ marginRight: "10px", borderRadius: "5px" }}
+              />
+            ))}
+          </Box>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Button type="submit" variant="contained" color="success" fullWidth>
+            Submit for Verification
+          </Button>
+        </Grid>
+      </Grid>
+    </form>
+  );
 
   return (
     <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ padding: "20px", marginTop: "30px", borderRadius: "10px" }}>
-        <Typography variant="h5" sx={{ marginBottom: "15px", textAlign: "center" }}>
+      <Paper elevation={3} sx={{ padding: "25px", marginTop: "30px", borderRadius: "10px" }}>
+        <Typography variant="h5" sx={{ marginBottom: "20px", textAlign: "center", fontWeight: "bold" }}>
           {title || "User Verification"}
         </Typography>
 
-        {/* Profile Verification Status */}
-        <Box sx={{ display: "flex", justifyContent: "center", marginBottom: "10px" }}>
-          {verificationStatus === "verified" ? (
-            <Avatar sx={{ bgcolor: "green", width: 50, height: 50 }}>
-              <CheckCircleIcon />
-            </Avatar>
-          ) : verificationStatus === "failed" ? (
-            <Avatar sx={{ bgcolor: "red", width: 50, height: 50 }}>
-              <ErrorOutlineIcon />
-            </Avatar>
-          ) : (
-            <Typography variant="body1" color="text.secondary">
-              Profile Verification: Pending
-            </Typography>
-          )}
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "15px" }}>
+          <Avatar
+            sx={{
+              bgcolor: verificationStatus === "verified" ? "success.main" : verificationStatus === "failed" ? "error.main" : "warning.main",
+              width: 55,
+              height: 55
+            }}
+          >
+            {verificationStatus === "verified" ? (
+              <CheckCircleIcon sx={{ fontSize: 32 }} />
+            ) : verificationStatus === "failed" ? (
+              <ErrorOutlineIcon sx={{ fontSize: 32 }} />
+            ) : (
+              <HourglassEmptyIcon sx={{ fontSize: 32 }} />
+            )}
+          </Avatar>
+          <Typography variant="body1" sx={{ marginLeft: "10px", fontWeight: "bold" }}>
+            {verificationStatus === "verified"
+              ? "Profile Verified ✔"
+              : verificationStatus === "failed"
+              ? "Verification Failed ❌"
+              : "Verification Pending ⏳"}
+          </Typography>
         </Box>
 
-        <form onSubmit={handleSubmit}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                label="Full Name"
-                name="fullName"
-                variant="outlined"
-                fullWidth
-                required
-                value={formData.fullName}
-                onChange={handleChange}
-              />
-            </Grid>
+        {errorMessage && (
+          <Alert severity="error" sx={{ marginBottom: 2 }}>
+            {errorMessage}
+          </Alert>
+        )}
 
-            <Grid item xs={12}>
-              <TextField
-                label="Email"
-                name="email"
-                type="email"
-                variant="outlined"
-                fullWidth
-                required
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                label="Phone Number"
-                name="phone"
-                type="tel"
-                variant="outlined"
-                fullWidth
-                required
-                value={formData.phone}
-                onChange={handleChange}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                label="Address"
-                name="address"
-                variant="outlined"
-                fullWidth
-                required
-                multiline
-                rows={2}
-                value={formData.address}
-                onChange={handleChange}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <InputLabel>Upload License or Citizenship (Required)</InputLabel>
-              <input type="file" onChange={handleFileChange} accept=".jpg, .jpeg, .png, .pdf" />
-              {errorMessage && (
-                <Typography color="error" sx={{ marginTop: "5px" }}>
-                  {errorMessage}
-                </Typography>
-              )}
-            </Grid>
-
-            <Grid item xs={6}>
-              <Button type="submit" variant="contained" color="primary" fullWidth>
-                Submit
-              </Button>
-            </Grid>
-
-            <Grid item xs={6}>
-              <Button variant="outlined" color="secondary" fullWidth onClick={handleRetry} disabled={verificationStatus !== "failed"}>
-                Retry
-              </Button>
-            </Grid>
-          </Grid>
-        </form>
+        {isLoading ? (
+          <Typography align="center">Loading profile data...</Typography>
+        ) : (
+          renderForm()
+        )}
       </Paper>
     </Container>
   );
 };
 
-export default CDRentVerificationform;
+export default CDRentVerificationForm;

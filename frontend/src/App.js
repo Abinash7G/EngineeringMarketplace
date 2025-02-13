@@ -29,6 +29,7 @@ import KhaltiButton from './components/KhaltiButton';
 import ApprovedCompanies from './components/ApprovedCompanies';
 import RejectedCompanies  from './components/RejectedCompanies';
 import CDRentVerificationform from './components/CDRentVerificationform';
+import RentVerificationAdmin from './components/RentVerificationAdmin';
 
 
 
@@ -73,6 +74,8 @@ const App = () => {
         <Route path="/payment/callback" element={<PaymentSuccess />} /> */}
         <Route path="/admin/rejected-companies" element={<ApprovedCompanies/>} /> 
         <Route path="/admin/approved-companies" element={<RejectedCompanies/>} /> 
+        <Route path="/admin/rent-verification" element={<RentVerificationAdmin/>} />
+
 
         
         

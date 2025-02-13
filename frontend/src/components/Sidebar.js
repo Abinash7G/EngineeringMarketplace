@@ -101,6 +101,16 @@ const Sidebar = () => {
               <ListItemText primary="Rejected Companies" />
             </ListItemButton>
           </ListItem>
+
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to="/admin/rent-verification">
+              <ListItemIcon sx={{ color: "white" }}>
+                <FaUsers />
+                </ListItemIcon>
+                <ListItemText primary="User Rent Verification" />
+                </ListItemButton>
+                </ListItem>
+          
         </List>
       </Box>
 
