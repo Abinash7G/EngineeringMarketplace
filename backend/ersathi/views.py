@@ -622,7 +622,48 @@ class RentVerificationAdminView(generics.UpdateAPIView):
         
         return Response(self.get_serializer(verification).data)
 
+#  ADD THIS NEW VIEW FOR FETCHING PENDING REQUESTS
+class RentVerificationListView(generics.ListAPIView):
+    serializer_class = RentVerificationSerializer
 
+    def get_queryset(self):
+        status_filter = self.request.query_params.get("status", None)
+        if status_filter:
+            return RentVerification.objects.filter(status=status_filter)
+        return RentVerification.objects.all()
+
+class RentVerificationUserUpdateView(generics.UpdateAPIView):
+    queryset = RentVerification.objects.all()
+    serializer_class = RentVerificationSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        uploaded_images = request.FILES.getlist('images')
+        
+        # Construct data manually to avoid deepcopy errors
+        data = {
+            "address": request.data.get("address", instance.address),
+            "uploaded_images": uploaded_images
+        }
+        
+        serializer = self.get_serializer(instance, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])  # Ensures only authenticated users can access this
+def user_verification_status(request):
+    """
+    Fetches the verification status of the currently logged-in user.
+    """
+    try:
+        verification = RentVerification.objects.get(email=request.user.email)
+        serializer = RentVerificationSerializer(verification)
+        return Response(serializer.data)
+    except RentVerification.DoesNotExist:
+        return Response({"status": "not_found"}, status=404)
 
 
 ####################################

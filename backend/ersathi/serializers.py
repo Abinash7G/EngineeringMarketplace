@@ -55,3 +55,23 @@ class RentVerificationSerializer(serializers.ModelSerializer):
             VerificationImage.objects.create(verification=verification, image=image)
         
         return verification
+
+    def update(self, instance, validated_data):
+        # Remove non-editable fields to prevent accidental updates
+        validated_data.pop('full_name', None)
+        validated_data.pop('email', None)
+        validated_data.pop('phone', None)
+
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        
+        # Update address only
+        instance.address = validated_data.get('address', instance.address)
+        instance.status = "pending"  # status will be pending after resubmitting!
+        instance.save()
+        
+        # Delete existing images and add new ones
+        instance.images.all().delete()
+        for image in uploaded_images:
+            VerificationImage.objects.create(verification=instance, image=image)
+        
+        return instance

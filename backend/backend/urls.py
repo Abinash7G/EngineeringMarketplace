@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from ersathi.views import  RentVerificationAdminView, RentVerificationCreateView, ServiceList, Test, get_user_profile, verify_khalti_payment #CreateProduct 
+from ersathi.views import  RentVerificationAdminView, RentVerificationCreateView,RentVerificationListView, RentVerificationUserUpdateView,  ServiceList, Test, get_user_profile, user_verification_status, verify_khalti_payment #CreateProduct 
 from ersathi.views import SignupView, LoginView
 from django.urls import path, include
 from ersathi.views import ForgotPasswordView
@@ -70,9 +70,11 @@ urlpatterns = [
     #path("api/initiate-khalti-payment/", initiate_khalti_payment, name="khalti_payment"),
     #path("api/payment-succes-callback/", payment_success_callback, name="khalti_payment_callback"),
     
-    path('api/rent-verification/', RentVerificationCreateView.as_view(), name='create-verification'),
-    path('api/rent-verification/<int:pk>/admin/', RentVerificationAdminView.as_view(), name='admin-verification'),
-    
+    path("api/rent-verification/", RentVerificationCreateView.as_view(), name="rent-verification-create"),
+    path("api/rent-verification/<int:pk>/", RentVerificationAdminView.as_view(), name="rent-verification-admin"),
+    path("api/rent-verification/list/", RentVerificationListView.as_view(), name="rent-verification-list"),
+    path('api/rent-verification/user/', user_verification_status, name='rent-verification-user'), 
+    path("api/rent-verification/user-update/<int:pk>/", RentVerificationUserUpdateView.as_view(), name="rent-verification-user-update"),
 ]   
 
 
