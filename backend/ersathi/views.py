@@ -802,7 +802,7 @@ def verify_khalti_payment(request):
         try:
             data = json.loads(request.body)
             token = data.get("token")  # Get token from frontend
-            amount = data.get("amount")  # Amount should be in paisa (NPR 10 = 1000 paisa)
+            amount = data.get("amount*100")  # Amount should be in paisa (NPR 10 = 1000 paisa)
             print(data)
             if not token or not amount:
                 return JsonResponse({"status": "failed", "message": "Missing token or amount"}, status=400)
