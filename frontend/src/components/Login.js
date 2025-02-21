@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 import API from "../services/api"; // Axios instance
-import { FaGoogle } from "react-icons/fa"; // Google icon
+//import { FaGoogle } from "react-icons/fa"; // Google icon
 import { TextField, Button, Typography, Box, Container } from "@mui/material";
 
 const Login = () => {
@@ -42,9 +42,9 @@ const Login = () => {
         }
     }
 };
-  const handleGoogleLogin = () => {
-    window.location.href = "http://127.0.0.1:8000/auth/login/google-oauth2/";
-  };
+  // const handleGoogleLogin = () => {
+  //   window.location.href = "http://127.0.0.1:8000/auth/login/google-oauth2/";
+  // };
 
   const handleForgotPassword = async () => {
     try {
@@ -140,7 +140,7 @@ const Login = () => {
         </Typography>
       )}
 
-      {!showForgotPassword && (
+      {/* {!showForgotPassword && (
         <Button
           variant="contained"
           startIcon={<FaGoogle />}
@@ -155,7 +155,7 @@ const Login = () => {
         >
           Login with Google
         </Button>
-      )}
+      )} */}
 
       <Typography variant="body2" align="center" sx={{ mt: 2 }}>
         Don’t have an account?{" "}

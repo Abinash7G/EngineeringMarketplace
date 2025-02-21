@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Grid, IconButton, Snackbar, Alert } from "@mui/material";
+import { Box, Typography, IconButton, Snackbar, Alert } from "@mui/material";
 import { FilterList } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import ClientNavbar from "../components/ClientNavbar";  // Changed from ./ClientNavbar
 import Products from "../components/CDProduct";
+import CDCompany from "../components/CDCompany"; // <--- added import
 import {
   fetchUserProfile,
   fetchCartItems,
@@ -12,11 +13,12 @@ import {
   addToWishlist,
   removeFromWishlist,
 } from "../services/api";
+import CDBanner from "../components/CDBanner";
 
 const ClientDashboard = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState("Guest");
-  const [companies, setCompanies] = useState([]);
+  
   const [wishlistItems, setWishlistItems] = useState([]);
   const [cartItems, setCartItems] = useState([]);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
@@ -46,10 +48,7 @@ const ClientDashboard = () => {
     };
 
     loadInitialData();
-    setCompanies([
-      { id: 1, name: "ABC Construction", location: "Kathmandu", rating: 4.5 },
-      { id: 2, name: "XYZ Supplies", location: "Pokhara", rating: 4.0 },
-    ]);
+    
   }, [navigate]);
 
   const loadCartAndWishlist = async () => {
@@ -64,7 +63,6 @@ const ClientDashboard = () => {
       console.error("Error loading cart and wishlist:", error);
     }
   };
-  
 
   const handleWishlistToggle = async (product) => {
     try {
@@ -112,32 +110,17 @@ const ClientDashboard = () => {
         cartItems={cartItems}
         onNavigateToProfile={() => navigate("/client/client-profile")}
       />
-
+        <CDBanner/>
       <Box sx={{ padding: "20px", marginTop: "64px" }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="h5">Companies</Typography>
+          <Typography variant="h5">Construction Company</Typography>
           <IconButton color="primary">
             <FilterList />
           </IconButton>
         </Box>
 
-        <Grid container spacing={3} sx={{ marginTop: "20px" }}>
-          {companies.map((company) => (
-            <Grid item xs={12} sm={6} md={4} key={company.id}>
-              <Box sx={{
-                height: "150px",
-                border: "1px solid #ddd",
-                borderRadius: "8px",
-                padding: "16px",
-                textAlign: "center"
-              }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>{company.name}</Typography>
-                <Typography>{company.location}</Typography>
-                <Typography>Rating: {company.rating}</Typography>
-              </Box>
-            </Grid>
-          ))}
-        </Grid>
+        {/* REMOVED THE <Grid> THAT MAPPED OVER companies AND REPLACED WITH <CDCompany /> */}
+        <CDCompany />
       </Box>
 
       <Products

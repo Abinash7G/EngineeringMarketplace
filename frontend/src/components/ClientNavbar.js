@@ -69,7 +69,7 @@ const ClientNavbar = ({ wishlist, onNavigateToProfile }) => {
           </IconButton>
 
           {/* Welcome Text */}
-          <Typography variant="h6" sx={{ flexGrow: 1, textAlign: "center", fontSize: "18px" }}>
+          <Typography variant="h6" sx={{ flexGrow: 1, textAlign: "left", fontSize: "18px" }}>
             Welcome, {firstName}
           </Typography>
 

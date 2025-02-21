@@ -9,7 +9,7 @@ import {
   IconButton,
   Select,
   MenuItem,
-} from "@mui/material"; // Removed unused imports
+} from "@mui/material";
 import { ShoppingCart, Favorite } from "@mui/icons-material";
 import API from "../services/api";
 
@@ -29,10 +29,12 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
 
     fetchProducts();
   }, []);
+
   const categoryLabels = {
     renting: "Rent",
     selling: "Buy",
   };
+
   const handleSortChange = (event) => {
     const option = event.target.value;
     setSortOption(option);
@@ -51,21 +53,23 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
   };
 
   return (
-    <Box sx={{ padding: "20px" }}>
+    <Box sx={{ padding: "40px" }}>
       <Box
         sx={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "20px",
+          marginBottom: "30px",
         }}
       >
-        <Typography variant="h5">Products</Typography>
+        <Typography variant="h4" sx={{ fontWeight: "bold", color: "primary.main" }}>
+          Products
+        </Typography>
         <Select
           value={sortOption}
           onChange={handleSortChange}
           displayEmpty
-          sx={{ minWidth: "150px" }}
+          sx={{ minWidth: "150px", backgroundColor: "background.paper" }}
         >
           <MenuItem value="">Sort by</MenuItem>
           <MenuItem value="priceLowToHigh">Price: Low to High</MenuItem>
@@ -73,7 +77,7 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
         </Select>
       </Box>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={4}>
         {products.map((product) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
             <Card
@@ -82,19 +86,26 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                 display: "flex",
                 flexDirection: "column",
                 position: "relative",
+                borderRadius: "12px",
+                boxShadow: 3,
+                transition: "transform 0.3s, box-shadow 0.3s",
+                "&:hover": {
+                  transform: "scale(1.05)",
+                  boxShadow: 6,
+                },
               }}
             >
-              {/* Rent/Sell Label */}
               <Box
                 sx={{
                   position: "absolute",
                   top: 0,
                   left: 0,
-                  backgroundColor: product.category === "renting" ? "red" : "blue",
+                  backgroundColor: product.category === "renting" ? "error.main" : "primary.main",
                   color: "white",
-                  padding: "4px 8px",
-                  fontSize: "12px",
+                  padding: "6px 12px",
+                  fontSize: "14px",
                   fontWeight: "bold",
+                  borderRadius: "0 0 12px 0",
                 }}
               >
                 {categoryLabels[product.category] || "Unknown"}
@@ -117,7 +128,7 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                   }}
                   sx={{
                     backgroundColor: "white",
-                    "&:hover": { backgroundColor: "white" },
+                    "&:hover": { backgroundColor: "grey.100" },
                   }}
                 >
                   <Favorite color={isInWishlist(product.id) ? "error" : "action"} />
@@ -129,7 +140,7 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                   }}
                   sx={{
                     backgroundColor: "white",
-                    "&:hover": { backgroundColor: "white" },
+                    "&:hover": { backgroundColor: "grey.100" },
                   }}
                 >
                   <ShoppingCart color="primary" />
@@ -145,25 +156,25 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                     : "https://via.placeholder.com/200"
                 }
                 alt={product.name}
-                sx={{ objectFit: "contain" }}
+                sx={{ objectFit:"contain", borderBottom: "1px solid grey.300" }}
               />
 
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography variant="h6" component="div" colour="primary" sx={{ fontWeight: "bold" }}>
+              <CardContent sx={{ flexGrow: 1, padding: "16px" }}>
+                <Typography variant="h6" component="div" sx={{ fontWeight: "bold", mb: 1 }}>
                   {product.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   {product.description}
                 </Typography>
-                <Typography variant="h6" color="primary" sx={{ mt: 2 }}>
+                <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
                   Rs. {product.price}
                 </Typography>
                 {product.category === "renting" && (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Per Day Rent: Rs. {product.per_day_rent}
                   </Typography>
                 )}
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                <Typography variant="body2" color="text.secondary">
                   Company: {product.company_name || "N/A"}
                 </Typography>
               </CardContent>

@@ -14,6 +14,8 @@ import RestPasswordView from './pages/RestPassswordView';
 import ClientProfile from './pages/ClientProfile';
 import ClientNavbar from './components/ClientNavbar';
 import CDProduct from './components/CDProduct';
+import CDCompany from './components/CDCompany';
+import CDBanner from './components/CDBanner';
 import Cart from './components/Cart';
 import Wishlist from './components/Wishlist';
 import CDCheckoutForm from './components/CDCheckoutForm';
@@ -22,6 +24,7 @@ import Documents from './components/Documents';
 import ServicesManagement from './components/ServicesManagement';
 import MaterialsManagement from './components/MaterialsManagement';
 import ProfileSettings from './components/ProfileSettings';
+import CompanyDetails from './components/CompanyDetails';
 //import Esewa from './pages/Esewa';
 import KhaltiButton from './components/KhaltiButton';
 //import PaymentSuccess from './components/PaymentSuccess';
@@ -30,6 +33,8 @@ import ApprovedCompanies from './components/ApprovedCompanies';
 import RejectedCompanies  from './components/RejectedCompanies';
 import CDRentVerificationform from './components/CDRentVerificationform';
 import RentVerificationAdmin from './components/RentVerificationAdmin';
+import CDConsultingInquiryForm from './components/CDConsultingInquiryForm';
+import InquiriesList from './components/InquiriesList';
 
 
 
@@ -56,6 +61,8 @@ const App = () => {
         <Route path="/client/client-profile" element={<ClientProfile/>} />
         <Route path="/ClientNavBar" element={<ClientNavbar/>} />
         <Route path="/CDproduct" element={<CDProduct/>} />
+        <Route path="/CDCompany" element={<CDCompany/>} />
+        <Route path="/CDBanner" element={<CDBanner/>} />
         <Route path="/client/cart" element={<Cart/>}/>
         <Route path="/client/wishlist" element={<Wishlist/>} />
         <Route path="/upload-kyc" element={<CDRentVerificationform/>}/>
@@ -67,6 +74,9 @@ const App = () => {
         <Route path="/services-management" element={<ServicesManagement/>} />
         <Route path="/materials-management" element={<MaterialsManagement/>} />
         <Route path="/profile-settings" element={<ProfileSettings/>} />
+        <Route path="/companydetails" element={<CompanyDetails/>} />
+        <Route path="/CDConsultingInquiryForm" element={<CDConsultingInquiryForm/>}/>
+        <Route path="/InquiriesList" element={<InquiriesList/>}/>
         {/*<Route path="/esewa" element={<Esewa/>} />*/}
         <Route path="/khalti" element={<KhaltiButton/>} /> 
 {/*
