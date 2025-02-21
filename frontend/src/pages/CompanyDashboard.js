@@ -6,25 +6,48 @@ import {
   Button,
   Container,
   Grid,
-  Card,
-  CardContent,
-  Tabs,
-  Tab,
   Box,
   Paper,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from "@mui/material";
+import {
+  Dashboard as DashboardIcon,
+  Build as BuildIcon,
+  Inventory as InventoryIcon,
+  CalendarToday as CalendarIcon,
+  Description as DescriptionIcon,
+  Settings as SettingsIcon,
+  Add as AddIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
+  Business as BusinessIcon,
+  Assignment as AssignmentIcon, // New icon for Inquiries
+} from "@mui/icons-material";
 import ServicesManagement from "../components/ServicesManagement";
 import MaterialsManagement from "../components/MaterialsManagement";
 import Appointments from "../components/Appointments";
 import Documents from "../components/Documents";
 import ProfileSettings from "../components/ProfileSettings";
+import CompanyUploadForm from "../components/CompanyUploadForm";
+import InquiriesList from "../components/InquiriesList"; // Import the InquiriesList component
+
+
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
+
 const CompanyDashboard = () => {
   const [tabIndex, setTabIndex] = useState(0);
   const [companyName, setCompanyName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [inquiries] = useState([]); // State to store inquiries
   const navigate = useNavigate();
 
+  // Fetch company name
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -32,169 +55,395 @@ const CompanyDashboard = () => {
         if (storedCompanyName) {
           setCompanyName(storedCompanyName);
         } else {
-          const companyId = localStorage.getItem("company_id"); // Retrieve company ID
+          const companyId = localStorage.getItem("company_id");
           if (!companyId) {
             console.error("Company ID not found. Redirecting to login.");
-            navigate("/login"); // Redirect to login if company ID is missing
+            navigate("/login");
             return;
           }
-          const response = await API.get(`/api/company-registration/${companyId}/`); // Fetch details
+          const response = await API.get(`/api/company-registration/${companyId}/`);
           const data = response.data;
-          setCompanyName(data.company_name); // Assuming backend returns `company_name`
-          sessionStorage.setItem("companyName", data.company_name); // Cache in sessionStorage
+          setCompanyName(data.company_name);
+          sessionStorage.setItem("companyName", data.company_name);
         }
       } catch (error) {
         console.error("Error fetching company data:", error);
+      } finally {
+        setLoading(false);
       }
     };
     loadInitialData();
   }, [navigate]);
 
-  const handleTabChange = (event, newIndex) => {
+  // Handle menu click
+  const handleMenuClick = (newIndex) => {
     setTabIndex(newIndex);
   };
-  const handleLogout = () => {
-    // Perform logout logic (e.g., clear auth tokens, session storage, etc.)
-    console.log("User logged out");
 
-    // Navigate to the login or home page
-    navigate("/");
-  };
+  // Handle form submission from CDConsultingInquiryForm
+  // const handleFormSubmit = (formData) => {
+  //   setInquiries([...inquiries, formData]); // Add new inquiry to the list
+  // };
 
+  if (loading) {
+    return (
+      <Box
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh' 
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <div>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Top Navigation Bar */}
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Welcome, {companyName}
-          </Typography>
-          <Button color="inherit" onClick={handleLogout}>
+      <AppBar position="static" sx={{ backgroundColor: '#2196f3', zIndex: 1201 }}>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Typography variant="h6">Welcome, {companyName}</Typography>
+          <Button color="inherit" sx={{ textTransform: 'uppercase' }}>
             Logout
           </Button>
-          </Toolbar>
+        </Toolbar>
       </AppBar>
 
-      {/* Main Container */}
-      <Container sx={{ mt: 4 }}>
-        {/* Tabs Navigation */}
-        <Tabs value={tabIndex} onChange={handleTabChange} centered>
-          <Tab label="Dashboard" />
-          <Tab label="Manage Services" />
-          <Tab label="Manage Materials" />
-          <Tab label="Appointments" />
-          <Tab label="Documents" />
-          <Tab label="Profile Settings" />
-        </Tabs>
+      {/* Main Content Wrapper */}
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Side Navigation */}
+        <Box
+          sx={{
+            width: 240,
+            backgroundColor: '#fff',
+            borderRight: '1px solid #ddd',
+            overflowY: 'auto', // Allow sidebar to scroll if content exceeds height
+          }}
+        >
+          <List>
+            <ListItem 
+              button 
+              selected={tabIndex === 0} 
+              onClick={() => handleMenuClick(0)}
+            >
+              <ListItemIcon>
+                <DashboardIcon color={tabIndex === 0 ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText primary="Dashboard" />
+            </ListItem>
 
-        {/* Content */}
-        <Grid container spacing={3} sx={{ mt: 3 }}>
-          {/* Dashboard Tab */}
-          {tabIndex === 0 && (
-            <Grid item xs={12}>
-              {/* Overview Metrics */}
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6">Total Services</Typography>
-                      <Typography variant="h4" color="primary">
+            <ListItem 
+              button 
+              selected={tabIndex === 1} 
+              onClick={() => handleMenuClick(1)}
+            >
+              <ListItemIcon>
+                <BuildIcon color={tabIndex === 1 ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText primary="Manage Services" />
+            </ListItem>
+
+            <ListItem 
+              button 
+              selected={tabIndex === 2} 
+              onClick={() => handleMenuClick(2)}
+            >
+              <ListItemIcon>
+                <InventoryIcon color={tabIndex === 2 ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText primary="Manage Materials" />
+            </ListItem>
+
+            <ListItem 
+              button 
+              selected={tabIndex === 3} 
+              onClick={() => handleMenuClick(3)}
+            >
+              <ListItemIcon>
+                <CalendarIcon color={tabIndex === 3 ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText primary="Appointments" />
+            </ListItem>
+
+            <ListItem 
+              button 
+              selected={tabIndex === 4} 
+              onClick={() => handleMenuClick(4)}
+            >
+              <ListItemIcon>
+                <DescriptionIcon color={tabIndex === 4 ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText primary="Documents" />
+            </ListItem>
+
+            <ListItem 
+              button 
+              selected={tabIndex === 5} 
+              onClick={() => handleMenuClick(5)}
+            >
+              <ListItemIcon>
+                <SettingsIcon color={tabIndex === 5 ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText primary="Profile Settings" />
+            </ListItem>
+
+            {/* New Menu Item for Company Upload Form */}
+            <ListItem 
+              button 
+              selected={tabIndex === 6} 
+              onClick={() => handleMenuClick(6)}
+            >
+              <ListItemIcon>
+                <BusinessIcon color={tabIndex === 6 ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText primary="Upload Company Details" />
+            </ListItem>
+
+            {/* New Menu Item for Inquiries */}
+            <ListItem 
+              button 
+              selected={tabIndex === 7} 
+              onClick={() => handleMenuClick(7)}
+            >
+              <ListItemIcon>
+                <AssignmentIcon color={tabIndex === 7 ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText primary="Inquiries" />
+            </ListItem>
+          </List>
+        </Box>
+
+        {/* Main Content Area */}
+        <Box 
+          sx={{ 
+            flex: 1, 
+            overflowY: 'auto', // Allow main content to scroll
+            backgroundColor: '#f5f5f5', 
+            position: 'relative', 
+            p: 2, 
+            marginRight: tabIndex === 0 ? '300px' : '0' // Adjust margin based on tabIndex
+          }}
+        >
+          <Container 
+            sx={{ 
+              py: 3, 
+              maxWidth: '100% !important', 
+            }}
+          >
+            {/* Dashboard (Tab 0) */}
+            {tabIndex === 0 && (
+              <Box>
+                {/* Metrics Cards */}
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={4}>
+                    <Paper
+                      sx={{
+                        p: 3,
+                        '&:hover': { boxShadow: 3 },
+                        transition: 'box-shadow 0.3s',
+                      }}
+                    >
+                      <Typography color="textSecondary">Total Services</Typography>
+                      <Typography
+                        variant="h4"
+                        color="#2196f3"
+                        sx={{ mt: 1 }}
+                      >
                         10
                       </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6">Pending Appointments</Typography>
-                      <Typography variant="h4" color="secondary">
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Paper
+                      sx={{
+                        p: 3,
+                        '&:hover': { boxShadow: 3 },
+                        transition: 'box-shadow 0.3s',
+                      }}
+                    >
+                      <Typography color="textSecondary">
+                        Pending Appointments
+                      </Typography>
+                      <Typography
+                        variant="h4"
+                        sx={{ mt: 1, color: '#e91e63' }}
+                      >
                         5
                       </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6">Total Revenue</Typography>
-                      <Typography variant="h4" color="success">
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Paper
+                      sx={{
+                        p: 3,
+                        '&:hover': { boxShadow: 3 },
+                        transition: 'box-shadow 0.3s',
+                      }}
+                    >
+                      <Typography color="textSecondary">
+                        Total Revenue
+                      </Typography>
+                      <Typography variant="h4" sx={{ mt: 1 }}>
                         $50,000
                       </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-
-              {/* Static Analytics Section */}
-              <Box mt={4}>
-                <Typography variant="h5" gutterBottom>
-                  Revenue and Appointments Analytics
-                </Typography>
-                <Typography variant="body1">
-                  Analytics data is currently unavailable.
-                </Typography>
-              </Box>
-
-              {/* Quick Actions */}
-              <Box mt={4}>
-                <Typography variant="h5" gutterBottom>
-                  Quick Actions
-                </Typography>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Button fullWidth variant="contained" color="primary">
-                      Add New Service
-                    </Button>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Button fullWidth variant="contained" color="primary">
-                      Add New Material
-                    </Button>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Button fullWidth variant="contained" color="primary">
-                      View Appointments
-                    </Button>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Button fullWidth variant="contained" color="primary">
-                      Generate Document
-                    </Button>
+                    </Paper>
                   </Grid>
                 </Grid>
-              </Box>
 
-              {/* Notifications Section */}
-              <Box mt={4}>
-                <Typography variant="h5" gutterBottom>
-                  Notifications
-                </Typography>
-                <Paper elevation={3} style={{ padding: "16px" }}>
-                  <Typography variant="body1">
-                    📅 Upcoming Appointment: Site Inspection on 12th Feb, 2025
+                {/* Analytics Section */}
+                <Box mt={4}>
+                  <Typography variant="h6" gutterBottom>
+                    Revenue and Appointments Analytics
                   </Typography>
-                  <Typography variant="body1">
-                    📦 Low Stock Alert: Cement stock below threshold.
-                  </Typography>
-                  <Typography variant="body1">
-                    ✅ Recent Service Added: Residential Construction Service.
-                  </Typography>
-                </Paper>
-              </Box>
-            </Grid>
-          )}
+                  <Paper sx={{ p: 2 }}>
+                    <Typography variant="body2">
+                      Analytics data is currently unavailable.
+                    </Typography>
+                  </Paper>
+                </Box>
 
-          {/* Other Tabs */}
-          {tabIndex === 1 && <ServicesManagement />}
-          {tabIndex === 2 && <MaterialsManagement />}
-          {tabIndex === 3 && <Appointments />}
-          {tabIndex === 4 && <Documents />}
-          {tabIndex === 5 && <ProfileSettings />}
-        </Grid>
-      </Container>
-    </div>
+                {/* Quick Actions */}
+                <Box mt={4}>
+                  <Typography variant="h6" gutterBottom>
+                    Quick Actions
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        sx={{
+                          backgroundColor: '#2196f3',
+                          textTransform: 'uppercase',
+                          '&:hover': { backgroundColor: '#1976d2' },
+                        }}
+                      >
+                        Add New Service
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        sx={{
+                          backgroundColor: '#2196f3',
+                          textTransform: 'uppercase',
+                          '&:hover': { backgroundColor: '#1976d2' },
+                        }}
+                      >
+                        Add New Material
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<CalendarIcon />}
+                        sx={{
+                          backgroundColor: '#2196f3',
+                          textTransform: 'uppercase',
+                          '&:hover': { backgroundColor: '#1976d2' },
+                        }}
+                      >
+                        View Appointments
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<DescriptionIcon />}
+                        sx={{
+                          backgroundColor: '#2196f3',
+                          textTransform: 'uppercase',
+                          '&:hover': { backgroundColor: '#1976d2' },
+                        }}
+                      >
+                        Generate Document
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                {/* Notifications */}
+                <Box mt={4}>
+                  <Typography variant="h6" gutterBottom>
+                    Notifications
+                  </Typography>
+                  <Paper sx={{ p: 2 }}>
+                    <List>
+                      <ListItem>
+                        <ListItemIcon>
+                          <CalendarIcon color="primary" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary="Upcoming Appointment: Site Inspection on 12th Feb, 2025"
+                        />
+                      </ListItem>
+                      <Divider />
+                      <ListItem>
+                        <ListItemIcon>
+                          <WarningIcon color="warning" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary="Low Stock Alert: Cement stock below threshold."
+                        />
+                      </ListItem>
+                      <Divider />
+                      <ListItem>
+                        <ListItemIcon>
+                          <CheckCircleIcon color="success" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary="Recent Service Added: Residential Construction Service."
+                        />
+                      </ListItem>
+                    </List>
+                  </Paper>
+                </Box>
+              </Box>
+            )}
+
+            {/* Other Tabs Content */}
+            {tabIndex === 1 && <ServicesManagement />}
+            {tabIndex === 2 && <MaterialsManagement />}
+            {tabIndex === 3 && <Appointments />}
+            {tabIndex === 4 && <Documents />}
+            {tabIndex === 5 && <ProfileSettings />}
+            {tabIndex === 6 && <CompanyUploadForm />}
+            {tabIndex === 7 && <InquiriesList inquiries={inquiries.length > 0 ? inquiries : undefined} />}
+           {/* New Tab for Inquiries */}
+          </Container>
+        </Box>
+
+        {/* Recent Activity Sidebar (fixed on the right) - Only for Dashboard */}
+        {tabIndex === 0 && (
+          <Box
+            sx={{ 
+              width: 300, 
+              backgroundColor: '#f0f0f0', 
+              borderLeft: '1px solid #ddd', 
+              p: 2, 
+              position: 'fixed', 
+              right: 0, 
+              top: 64, 
+              bottom: 0, 
+              overflowY: 'auto', 
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              Recent Activity
+            </Typography>
+            {/* Add your recent activity content here */}
+          </Box>
+        )}
+      </Box>
+    </Box>
   );
 };
 
