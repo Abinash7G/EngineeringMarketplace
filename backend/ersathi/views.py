@@ -73,9 +73,29 @@ def verify_verification_token(token, expiration=3600):
 
 
 
-class ServiceList(APIView):
-    def get(self, request):
-        return Response({"message": "Service List View is working!"})
+# class ServiceList(APIView):
+#     def get(self, request):
+#         return Response({"message": "Service List View is working!"})
+
+
+
+from django.http import JsonResponse
+from .models import ServiceCategory, Service
+
+def get_services(request):
+    """Returns services grouped by categories"""
+    categories = ServiceCategory.objects.prefetch_related("services").all()
+    data = [
+        {
+            "category": category.name,
+            "services": [{"id": service.id, "name": service.name} for service in category.services.all()]
+        }
+        for category in categories
+    ]
+    return JsonResponse(data, safe=False)
+
+
+
 
 
 # Dynamically get the user model
@@ -157,6 +177,7 @@ class ConfirmEmailView(APIView):
 
 
 #LOGIN LOGIC
+from rest_framework_simplejwt.tokens import RefreshToken
 class LoginView(APIView):
     def post(self, request, *args, **kwargs):
         username = request.data.get("username")
@@ -167,15 +188,18 @@ class LoginView(APIView):
             groups = user.groups.first()
                
 
-            
+            # Include company_id in the response
+            company_id = user.company.id if user.company else None
+
             # Generate tokens
-            from rest_framework_simplejwt.tokens import RefreshToken
+            
             refresh = RefreshToken.for_user(user)
 
             return Response({
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
                 "role": groups.name if groups else None,
+                "company_id": company_id,  # Add company_id to the response
             }, status=status.HTTP_200_OK)
         
         return Response({"message": "Invalid username or password."}, status=status.HTTP_401_UNAUTHORIZED)
@@ -354,9 +378,9 @@ def reject_company(request, pk):
 def get_company_details(request, pk):
     try:
         # Fetch the company details using the primary key (id)
-        company = Company.objects.get(pk=pk)
+        company = Company.objects.get(id=pk)
         serializer = CompanyRegistrationSerializer(company)  # Serialize the company object
-        return Response(serializer.data, status=200)  # Return serialized data
+        return Response(serializer.data, status=status.HTTP_200_OK)  # Return serialized data
     except Company.DoesNotExist:
         return Response({'error': 'Company not found'}, status=404)  # Handle company not found
 
