@@ -2,12 +2,14 @@ from django.contrib import admin
 
 # Register your models here.
 from django.contrib import admin
-from .models import Service
+from .models import Service, ServiceCategory
 from .models import Product
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')  # Customize this to show fields in the admin table
+    
+admin.site.register(ServiceCategory)
     
 from .models import CustomUser, Company
 
@@ -15,6 +17,7 @@ from .models import CustomUser, Company
 @admin.register(CustomUser)
 class CustomUserAdmin(admin.ModelAdmin):
     pass
+
 
 @admin.register(Company)
 class CompanyRegistrationAdmin(admin.ModelAdmin):

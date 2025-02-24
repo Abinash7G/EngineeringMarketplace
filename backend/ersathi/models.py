@@ -5,11 +5,21 @@ from django.contrib.auth.models import AbstractUser
 from django.forms import ValidationError
 
 # Service Model
-class Service(models.Model):
-    name = models.CharField(max_length=255)
+from django.db import models
+
+class ServiceCategory(models.Model):
+    name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
         return self.name
+
+class Service(models.Model):
+    name = models.CharField(max_length=255)
+    category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE, related_name="services", default=1)  # Default category ID
+
+    def __str__(self):
+        return f"{self.name} ({self.category.name})"
+
 
 
 # Define company type choices

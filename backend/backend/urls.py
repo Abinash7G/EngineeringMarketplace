@@ -16,12 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from ersathi.views import  RentVerificationAdminView, RentVerificationCreateView,RentVerificationListView, RentVerificationUserUpdateView,  ServiceList, Test, get_user_profile, user_verification_status, verify_khalti_payment #CreateProduct 
+from ersathi.views import  RentVerificationAdminView, RentVerificationCreateView,RentVerificationListView, RentVerificationUserUpdateView,  ServiceList, Test,  get_user_profile, user_verification_status, verify_khalti_payment #CreateProduct 
 from ersathi.views import SignupView, LoginView
 from django.urls import path, include
 from ersathi.views import ForgotPasswordView
 from ersathi.views import CompanyRegistrationView, get_company_registrations, approve_company, reject_company,get_company_details
-from ersathi.views import ServiceList
+from ersathi.views import get_services
 from ersathi.views import ConfirmEmailView , ResetPasswordView
 from ersathi.views import change_password
 from ersathi.views import get_all_products, get_products_by_category, get_company_products
@@ -30,11 +30,12 @@ from django.conf.urls.static import static
 from django.urls import path
 from ersathi.views import get_cart, add_to_cart, remove_from_cart, get_wishlist, add_to_wishlist, remove_from_wishlist
 #from ersathi.views import  initiate_khalti_payment, payment_success_callback
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/services/', ServiceList.as_view(), name='service-list'),
+    path('api/services/', get_services, name='get_services'),
     path('api/signup/', SignupView.as_view(), name='signup'),
     path('api/login/', LoginView.as_view(), name='login'),
     path('auth/', include('social_django.urls', namespace='social')),
@@ -75,6 +76,8 @@ urlpatterns = [
     path("api/rent-verification/list/", RentVerificationListView.as_view(), name="rent-verification-list"),
     path('api/rent-verification/user/', user_verification_status, name='rent-verification-user'), 
     path("api/rent-verification/user-update/<int:pk>/", RentVerificationUserUpdateView.as_view(), name="rent-verification-user-update"),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]   
 
 
