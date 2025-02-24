@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -13,53 +13,119 @@ import {
   ListItemAvatar,
   ListItemText,
   Divider,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
+import axios from "axios";
 
 const CompanyUploadForm = () => {
-  // State to hold company details
   const [company, setCompany] = useState({
     companyName: "",
     email: "",
     phoneNumber: "",
     address: "",
-    logo: "", // Base64 string for logo
+    logo: "",
     aboutUs: "",
     services: [],
     projects: [],
     team: [],
   });
 
-  // State for form inputs
   const [service, setService] = useState({ category: "", subServices: [] });
-  const [project, setProject] = useState({ name: "", description: "", year: "", image: "" }); // Base64 string for project image
-  const [teamMember, setTeamMember] = useState({ name: "", role: "", avatar: "" }); // Base64 string for team member avatar
+  const [project, setProject] = useState({ name: "", description: "", year: "", image: "" });
+  const [teamMember, setTeamMember] = useState({ name: "", role: "", avatar: "" });
+  const [categories, setCategories] = useState([]);
+  const [subServices, setSubServices] = useState([]);
 
-  // Handle form submission
+  // Fetch company data on component mount
+  useEffect(() => {
+    const fetchCompanyData = async () => {
+      try {
+        //  Retrieve correct access token
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          console.error("No token found. User is not authenticated.");
+          return;
+        }
+
+        //  Retrieve the logged-in user's `company_id`
+        const companyId = localStorage.getItem("company_id"); 
+        if (!companyId) {
+          console.error("No company_id found in localStorage.");
+          return;
+        }
+
+        //  Fetch the correct company details using the ID
+        const response = await axios.get(
+          `http://127.0.0.1:8000/api/company-registration/${companyId}/`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.status === 200) {
+          const companyData = response.data;
+          setCompany({
+            companyName: companyData.company_name, // Use correct API field
+            email: companyData.company_email,
+            phoneNumber: companyData.phone_number || "N/A",
+            address: companyData.location, // Assuming 'location' is the address
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching company data:", error);
+      }
+    };
+
+    fetchCompanyData();
+  }, []);
+
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/services/")
+      .then((response) => response.json())
+      .then((data) => setCategories(data))
+      .catch((error) => console.error("Error fetching categories:", error));
+  }, []);
+
+  const handleCategoryChange = (e) => {
+    const selectedCategory = e.target.value;
+    setService({ ...service, category: selectedCategory });
+
+    const selectedCategoryData = categories.find((cat) => cat.category === selectedCategory);
+    if (selectedCategoryData) {
+      setSubServices(selectedCategoryData.services);
+    } else {
+      setSubServices([]);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Company Details Submitted:", company);
-    // Here, you can send the data to a backend API or store it in a database
   };
 
-  // Add a new service
   const addService = () => {
     setCompany((prev) => ({
       ...prev,
       services: [...prev.services, { id: prev.services.length + 1, ...service }],
     }));
-    setService({ category: "", subServices: [] }); // Reset service form
+    setService({ category: "", subServices: [] });
+    setSubServices([]);
   };
 
-  // Add a new project
   const addProject = () => {
     setCompany((prev) => ({
       ...prev,
       projects: [...prev.projects, { id: prev.projects.length + 1, ...project }],
     }));
-    setProject({ name: "", description: "", year: "", image: "" }); // Reset project form
+    setProject({ name: "", description: "", year: "", image: "" });
   };
 
-  // Add a new team member
   const addTeamMember = () => {
     if (!teamMember.name || !teamMember.role || !teamMember.avatar) {
       alert("Please fill in all fields for the team member.");
@@ -69,18 +135,17 @@ const CompanyUploadForm = () => {
       ...prev,
       team: [...prev.team, { id: prev.team.length + 1, ...teamMember }],
     }));
-    setTeamMember({ name: "", role: "", avatar: "" }); // Reset team member form
+    setTeamMember({ name: "", role: "", avatar: "" });
   };
 
-  // Handle image upload for logo, project image, and team member avatar
   const handleImageUpload = (event, setImageState) => {
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImageState(reader.result); // Set the Base64 string
+        setImageState(reader.result);
       };
-      reader.readAsDataURL(file); // Convert the image to Base64
+      reader.readAsDataURL(file);
     }
   };
 
@@ -90,7 +155,6 @@ const CompanyUploadForm = () => {
         Upload Company Details
       </Typography>
 
-      {/* Company Details Form */}
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
         <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold" }}>
           Company Information
@@ -157,29 +221,43 @@ const CompanyUploadForm = () => {
         </Grid>
       </Paper>
 
-      {/* Services Form */}
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
         <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold" }}>
           Add Services
         </Typography>
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Service Category"
-              value={service.category}
-              onChange={(e) => setService({ ...service, category: e.target.value })}
-            />
+            <FormControl fullWidth>
+              <InputLabel>Service Category</InputLabel>
+              <Select
+                value={service.category}
+                onChange={handleCategoryChange}
+                label="Service Category"
+              >
+                {categories.map((category) => (
+                  <MenuItem key={category.category} value={category.category}>
+                    {category.category}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Sub-Services (comma-separated)"
-              value={service.subServices.join(",")}
-              onChange={(e) =>
-                setService({ ...service, subServices: e.target.value.split(",") })
-              }
-            />
+            <FormControl fullWidth>
+              <InputLabel>Sub-Services</InputLabel>
+              <Select
+                multiple
+                value={service.subServices}
+                onChange={(e) => setService({ ...service, subServices: e.target.value })}
+                label="Sub-Services"
+              >
+                {subServices.map((subService) => (
+                  <MenuItem key={subService.id} value={subService.name}>
+                    {subService.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={12}>
             <Button variant="contained" onClick={addService}>
@@ -189,7 +267,6 @@ const CompanyUploadForm = () => {
         </Grid>
       </Paper>
 
-      {/* Projects Form */}
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
         <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold" }}>
           Add Projects
@@ -243,7 +320,6 @@ const CompanyUploadForm = () => {
         </Grid>
       </Paper>
 
-      {/* Team Members Form */}
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
         <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold" }}>
           Add Team Members
@@ -288,7 +364,6 @@ const CompanyUploadForm = () => {
           </Grid>
         </Grid>
 
-        {/* Display Added Team Members */}
         {company.team.length > 0 && (
           <Box sx={{ mt: 4 }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
@@ -314,10 +389,9 @@ const CompanyUploadForm = () => {
         )}
       </Paper>
 
-      {/* Submit Button */}
       <Box sx={{ textAlign: "center", mt: 4 }}>
         <Button variant="contained" size="large" onClick={handleSubmit}>
-          Submit Company Details
+          Save Details
         </Button>
       </Box>
     </Container>

@@ -23,16 +23,26 @@ const Login = () => {
 
     try {
         const response = await API.post("/api/login/", formData);
+        
         if (response.status === 200) {
-            const { access, role,company_id } = response.data;
+            const { access, refresh, role, company_id } = response.data;
+
+            // Store access & refresh tokens
             localStorage.setItem("access_token", access);
+            localStorage.setItem("refresh_token", refresh);
             localStorage.setItem("company_id", company_id);
             
+            //  Set Axios default header for all future requests
+            API.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
             // Redirect based on role
-            if (role === "Platformadmin") navigate("/admin"); //!* Redirect to admin dashboard *!
-            else if (role === "Admin") navigate("/company"); //company dashboard
-            else navigate("/client");
+            if (role === "Platformadmin") {
+                navigate("/admin"); // Redirect to platform admin dashboard
+            } else if (role === "Admin") {
+                navigate("/company"); // Redirect to company dashboard
+            } else {
+                navigate("/client"); // Redirect to client page
+            }
         }
     } catch (error) {
         if (error.response) {
@@ -42,6 +52,7 @@ const Login = () => {
         }
     }
 };
+
   // const handleGoogleLogin = () => {
   //   window.location.href = "http://127.0.0.1:8000/auth/login/google-oauth2/";
   // };
