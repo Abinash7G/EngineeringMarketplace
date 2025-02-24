@@ -1,16 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Typography,
   Button,
   Container,
-  Grid,
-  Card,
-  CardContent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  DialogActions,
   Table,
   TableBody,
   TableCell,
@@ -19,37 +11,100 @@ import {
   TableRow,
   Paper,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
 } from "@mui/material";
 import { Edit, Delete } from "@mui/icons-material";
+import axios from "axios";
 
 const ServicesManagement = () => {
-  const [services, setServices] = useState([
-    { id: 1, name: "Residential Construction", category: "Building Construction", price: "$5000", status: "Available" },
-    { id: 2, name: "Geotechnical Analysis", category: "Engineering Consulting", price: "$1500", status: "Unavailable" },
-  ]);
-
+  const [services, setServices] = useState([]); // Store added services
+  const [categories, setCategories] = useState([]); // Store service categories from backend
+  const [subServices, setSubServices] = useState([]); // Store sub-services based on selected category
   const [open, setOpen] = useState(false);
+  const [editingServiceIndex, setEditingServiceIndex] = useState(null); // Track service being edited
+
   const [newService, setNewService] = useState({
-    name: "",
     category: "",
+    subServices: [], // Allow multiple selection
     price: "",
     status: "Available",
   });
 
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  // Fetch categories & services from backend
+  useEffect(() => {
+    axios.get("http://127.0.0.1:8000/api/services/")
+      .then((response) => setCategories(response.data))
+      .catch((error) => console.error("Error fetching services:", error));
+  }, []);
 
-  const handleChange = (e) => {
-    setNewService({ ...newService, [e.target.name]: e.target.value });
+  // Handle category selection & load sub-services
+  const handleCategoryChange = (e) => {
+    const selectedCategory = e.target.value;
+    setNewService({ ...newService, category: selectedCategory, subServices: [] });
+
+    const categoryData = categories.find(cat => cat.category === selectedCategory);
+    if (categoryData) {
+      setSubServices(categoryData.services);
+    } else {
+      setSubServices([]);
+    }
   };
 
-  const handleAddService = () => {
-    setServices([...services, { id: services.length + 1, ...newService }]);
+  // Open & close modal
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => {
+    setEditingServiceIndex(null);
+    setNewService({ category: "", subServices: [], price: "", status: "Available" });
+    setOpen(false);
+  };
+
+  // Add or Update Service
+  const handleSaveService = () => {
+    if (!newService.category || newService.subServices.length === 0) return;
+
+    const newEntries = newService.subServices.map(sub => ({
+      category: newService.category,
+      subService: sub,
+      price: newService.price,
+      status: newService.status
+    }));
+
+    if (editingServiceIndex !== null) {
+      // Update existing service
+      setServices((prev) =>
+        prev.map((s, i) => (i === editingServiceIndex ? newEntries[0] : s))
+      );
+    } else {
+      // Add new services (one row per sub-service)
+      setServices([...services, ...newEntries]);
+    }
+    
     handleClose();
   };
 
-  const handleDeleteService = (id) => {
-    setServices(services.filter((service) => service.id !== id));
+  // Edit Service
+  const handleEditService = (index) => {
+    setEditingServiceIndex(index);
+    setNewService({
+      category: services[index].category,
+      subServices: [services[index].subService], // Set the selected sub-service
+      price: services[index].price,
+      status: services[index].status
+    });
+    handleOpen();
+  };
+
+  // Delete Service
+  const handleDeleteService = (index) => {
+    setServices(services.filter((_, i) => i !== index));
   };
 
   return (
@@ -63,30 +118,30 @@ const ServicesManagement = () => {
         Add New Service
       </Button>
 
-      {/* Services List */}
+      {/* Service Table */}
       <TableContainer component={Paper} sx={{ mt: 4 }}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Service Name</TableCell>
-              <TableCell>Category</TableCell>
+              <TableCell>Service Category</TableCell>
+              <TableCell>Sub-Service</TableCell>
               <TableCell>Price</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {services.map((service) => (
-              <TableRow key={service.id}>
-                <TableCell>{service.name}</TableCell>
+            {services.map((service, index) => (
+              <TableRow key={index}>
                 <TableCell>{service.category}</TableCell>
-                <TableCell>{service.price}</TableCell>
+                <TableCell>{service.subService}</TableCell>
+                <TableCell>${service.price}</TableCell>
                 <TableCell>{service.status}</TableCell>
                 <TableCell>
-                  <IconButton color="primary">
+                  <IconButton color="primary" onClick={() => handleEditService(index)}>
                     <Edit />
                   </IconButton>
-                  <IconButton color="secondary" onClick={() => handleDeleteService(service.id)}>
+                  <IconButton color="secondary" onClick={() => handleDeleteService(index)}>
                     <Delete />
                   </IconButton>
                 </TableCell>
@@ -96,49 +151,62 @@ const ServicesManagement = () => {
         </Table>
       </TableContainer>
 
-      {/* Add Service Dialog */}
+      {/* Add/Edit Service Dialog */}
       <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>Add New Service</DialogTitle>
+        <DialogTitle>{editingServiceIndex !== null ? "Edit Service" : "Add New Service"}</DialogTitle>
         <DialogContent>
-          <TextField
-            label="Service Name"
-            name="name"
-            fullWidth
-            margin="normal"
-            value={newService.name}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Category"
-            name="category"
-            fullWidth
-            margin="normal"
-            value={newService.category}
-            onChange={handleChange}
-          />
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Service Category</InputLabel>
+            <Select value={newService.category} onChange={handleCategoryChange}>
+              {categories.map((category) => (
+                <MenuItem key={category.category} value={category.category}>
+                  {category.category}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Sub-Services</InputLabel>
+            <Select
+              multiple
+              value={newService.subServices}
+              onChange={(e) => setNewService({ ...newService, subServices: e.target.value })}
+              disabled={!newService.category}
+            >
+              {subServices.map((subService) => (
+                <MenuItem key={subService.id} value={subService.name}>
+                  {subService.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           <TextField
             label="Price"
-            name="price"
             fullWidth
-            margin="normal"
+            sx={{ mt: 2 }}
             value={newService.price}
-            onChange={handleChange}
+            onChange={(e) => setNewService({ ...newService, price: e.target.value })}
           />
-          <TextField
-            label="Status"
-            name="status"
-            fullWidth
-            margin="normal"
-            value={newService.status}
-            onChange={handleChange}
-          />
+
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={newService.status}
+              onChange={(e) => setNewService({ ...newService, status: e.target.value })}
+            >
+              <MenuItem value="Available">Available</MenuItem>
+              <MenuItem value="Unavailable">Unavailable</MenuItem>
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} color="secondary">
             Cancel
           </Button>
-          <Button onClick={handleAddService} color="primary">
-            Add
+          <Button onClick={handleSaveService} color="primary">
+            {editingServiceIndex !== null ? "Update" : "Add"}
           </Button>
         </DialogActions>
       </Dialog>
