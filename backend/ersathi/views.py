@@ -80,7 +80,8 @@ def verify_verification_token(token, expiration=3600):
 
 
 from django.http import JsonResponse
-from .models import ServiceCategory, Service
+from .models import ServiceCategory, Service, CompanyServices
+from django.core.exceptions import ObjectDoesNotExist
 
 def get_services(request):
     """Returns services grouped by categories"""
@@ -95,8 +96,113 @@ def get_services(request):
     return JsonResponse(data, safe=False)
 
 
+###
+# #
+# #
+# #compayadded service
+##
+##
+@csrf_exempt
 
+def get_company_services(request):
+    """Returns all services added by the company"""
+    try:
+        # Get company/user from token or session (assuming authentication via token)
+        user = request.user  # This requires authentication middleware or token decoding
+        if not user.is_authenticated:
+            return JsonResponse({"error": "Authentication required"}, status=401)
 
+        services = CompanyServices.objects.filter(company=user).select_related('service__category')
+        data = [
+            {
+                "id": service.id,
+                "category": service.service.category.name,
+                "sub_service": service.service.name,
+                "price": float(service.price),
+                "status": service.status
+            }
+            for service in services
+        ]
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+@csrf_exempt
+def create_company_service(request):
+    """Create a new service for the company"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user = request.user  # Get authenticated user/company
+            if not user.is_authenticated:
+                return JsonResponse({"error": "Authentication required"}, status=401)
+
+            service = Service.objects.get(id=data.get('service_id'))  # Get service by ID from dropdown
+            company_service = CompanyServices.objects.create(
+                company=user,
+                service=service,
+                price=data['price'],
+                status=data['status']
+            )
+            return JsonResponse({
+                "id": company_service.id,
+                "category": company_service.service.category.name,
+                "sub_service": company_service.service.name,
+                "price": float(company_service.price),
+                "status": company_service.status
+            })
+        except ObjectDoesNotExist:
+            return JsonResponse({"error": "Service not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@csrf_exempt
+def update_company_service(request, service_id):
+    """Update an existing service for the company"""
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            user = request.user
+            if not user.is_authenticated:
+                return JsonResponse({"error": "Authentication required"}, status=401)
+
+            company_service = CompanyServices.objects.get(id=service_id, company=user)
+            service = Service.objects.get(id=data.get('service_id'))  # Get updated service
+            company_service.service = service
+            company_service.price = data['price']
+            company_service.status = data['status']
+            company_service.save()
+            return JsonResponse({
+                "id": company_service.id,
+                "category": company_service.service.category.name,
+                "sub_service": company_service.service.name,
+                "price": float(company_service.price),
+                "status": company_service.status
+            })
+        except ObjectDoesNotExist:
+            return JsonResponse({"error": "Service not found or unauthorized"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@csrf_exempt
+def delete_company_service(request, service_id):
+    """Delete a service for the company"""
+    if request.method == 'DELETE':
+        try:
+            user = request.user
+            if not user.is_authenticated:
+                return JsonResponse({"error": "Authentication required"}, status=401)
+
+            company_service = CompanyServices.objects.get(id=service_id, company=user)
+            company_service.delete()
+            return JsonResponse({"message": "Service deleted successfully"})
+        except ObjectDoesNotExist:
+            return JsonResponse({"error": "Service not found or unauthorized"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
 
 # Dynamically get the user model
 CustomUser = get_user_model()
@@ -374,17 +480,28 @@ def reject_company(request, pk):
         return Response({'error': 'Company not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
+# @api_view(['GET'])
+# def get_company_details(request, pk):
+#     try:
+#         # Fetch the company details using the primary key (id)
+#         company = Company.objects.get(id=pk)
+#         serializer = CompanyRegistrationSerializer(company)  # Serialize the company object
+#         return Response(serializer.data, status=status.HTTP_200_OK)  # Return serialized data
+#     except Company.DoesNotExist:
+#         return Response({'error': 'Company not found'}, status=404)  # Handle company not found
+from rest_framework.permissions import IsAuthenticated
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_company_details(request, pk):
     try:
-        # Fetch the company details using the primary key (id)
-        company = Company.objects.get(id=pk)
-        serializer = CompanyRegistrationSerializer(company)  # Serialize the company object
-        return Response(serializer.data, status=status.HTTP_200_OK)  # Return serialized data
+        company = Company.objects.get(id=pk)  # Fetch company by ID
+        return JsonResponse({
+            'company_name': company.company_name,  # Adjust field name if different
+        })
     except Company.DoesNotExist:
-        return Response({'error': 'Company not found'}, status=404)  # Handle company not found
-
-
+        return JsonResponse({'error': 'Company not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 
@@ -519,9 +636,36 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import Product
-
+from django.shortcuts import get_object_or_404
 class Test(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        company_id = request.query_params.get('company_id')
+        if not company_id:
+            return Response({"error": "Company ID is required."}, status=400)
+
+        try:
+            company_id = int(company_id)  # Ensure it's an integer
+            products = Product.objects.filter(company_id=company_id)
+            # Serialize the data (you may need a serializer like ProductSerializer)
+            data = [{
+                'id': product.id,
+                'title': product.title,
+                'description': product.description,
+                'price': str(product.price),  # Convert Decimal to string for JSON
+                'category': product.category,
+                'perDayRent': str(product.per_day_rent) if product.per_day_rent else None,
+                'discountPercentage': str(product.discount_percentage) if product.discount_percentage else None,
+                'company': product.company_id,
+                'isAvailable': product.is_available,
+                'createdAt': product.created_at.isoformat(),
+            } for product in products]
+            return Response(data, status=200)
+        except ValueError:
+            return Response({"error": "Invalid company ID format."}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
     def post(self, request):
         user = request.user
@@ -539,7 +683,7 @@ class Test(APIView):
         if category not in ["selling", "renting"]:
             return Response({"error": "Invalid category. Must be 'Selling' or 'Renting'."}, status=400)
 
-        # 4) Read the uploaded file
+        # 4) Read the uploaded file (if any)
         image_file = request.FILES.get("image")
 
         # 5) Convert 'discountPercentage' to Decimal (handle empty case)
@@ -561,7 +705,7 @@ class Test(APIView):
             title=data["title"],
             description=data["description"],
             price=Decimal(data["price"]),
-            category=category,  # Now using frontend category
+            category=category,
             per_day_rent=per_day_rent,  # Allow NULL for "Selling"
             discount_percentage=discount_value,
             image=image_file,  # Handle file
@@ -569,8 +713,53 @@ class Test(APIView):
             is_available=is_available,
         )
 
-        return Response({"message": "Product created successfully"}, status=201)
+        return Response({"message": "Product created successfully", "id": product.id}, status=201)
 
+    def put(self, request, pk):
+        # Handle updating an existing product (similar logic to POST, but update instead of create)
+        product = get_object_or_404(Product, pk=pk)
+        if product.company_id != request.user.company_id:
+            return Response({"error": "You can only edit products belonging to your company."}, status=403)
+
+        data = request.data
+        category = data.get("category", "").lower()
+
+        if category not in ["selling", "renting"]:
+            return Response({"error": "Invalid category. Must be 'Selling' or 'Renting'."}, status=400)
+
+        image_file = request.FILES.get("image")
+
+        discount_value = Decimal(data.get("discountPercentage", "0"))
+        is_available = data.get("isAvailable", "false").lower() == "true"
+
+        per_day_rent = None
+        if category == "renting":
+            try:
+                per_day_rent = Decimal(data.get("perDayRent", "0"))
+            except:
+                return Response({"error": "Invalid perDayRent value."}, status=400)
+
+        product.title = data["title"]
+        product.description = data["description"]
+        product.price = Decimal(data["price"])
+        product.category = category
+        product.per_day_rent = per_day_rent
+        product.discount_percentage = discount_value
+        product.is_available = is_available
+
+        if image_file:
+            product.image = image_file
+
+        product.save()
+        return Response({"message": "Product updated successfully"}, status=200)
+
+    def delete(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        if product.company_id != request.user.company_id:
+            return Response({"error": "You can only delete products belonging to your company."}, status=403)
+
+        product.delete()
+        return Response({"message": "Product deleted successfully"}, status=204)
             
 # ########
 # ##RentVerification view

@@ -20,7 +20,22 @@ class Service(models.Model):
     def __str__(self):
         return f"{self.name} ({self.category.name})"
 
+# from django.contrib.auth.models import User  # Import User directly
+from django.conf import settings
+# CompanyServices Model for company-specific services
+class CompanyServices(models.Model):
+    company = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="company_services")  # Use settings.AUTH_USER_MODEL
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="company_services")  # Link to the generic service
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Price in Nepali Rupees
+    status = models.CharField(max_length=20, default="Available", choices=[("Available", "Available"), ("Unavailable", "Unavailable")])  # Availability status
+    created_at = models.DateTimeField(auto_now_add=True)  # Timestamp for creation
+    updated_at = models.DateTimeField(auto_now=True)  # Timestamp for updates
 
+    def __str__(self):
+        return f"{self.company.username}'s {self.service.name} - Rs.{self.price} ({self.status})"
+
+    class Meta:
+        unique_together = ('company', 'service')  # Ensure a company can't add the same service twice
 
 # Define company type choices
 COMPANY_TYPE_CHOICES = [
