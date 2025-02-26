@@ -14,6 +14,7 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  Alert,
 } from "@mui/material";
 import {
   Dashboard as DashboardIcon,
@@ -26,7 +27,8 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
   Business as BusinessIcon,
-  Assignment as AssignmentIcon, // New icon for Inquiries
+  Assignment as AssignmentIcon,
+  Logout as LogoutIcon,
 } from "@mui/icons-material";
 import ServicesManagement from "../components/ServicesManagement";
 import MaterialsManagement from "../components/MaterialsManagement";
@@ -34,9 +36,7 @@ import Appointments from "../components/Appointments";
 import Documents from "../components/Documents";
 import ProfileSettings from "../components/ProfileSettings";
 import CompanyUploadForm from "../components/CompanyUploadForm";
-import InquiriesList from "../components/InquiriesList"; // Import the InquiriesList component
-
-
+import InquiriesList from "../components/InquiriesList";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 
@@ -44,30 +44,64 @@ const CompanyDashboard = () => {
   const [tabIndex, setTabIndex] = useState(0);
   const [companyName, setCompanyName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [inquiries] = useState([]); // State to store inquiries
+  const [inquiries, setInquiries] = useState([]);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Fetch company name
+  // Fetch company name and handle inquiries
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         const storedCompanyName = sessionStorage.getItem("companyName");
         if (storedCompanyName) {
           setCompanyName(storedCompanyName);
-        } else {
-          const companyId = localStorage.getItem("company_id");
-          if (!companyId) {
-            console.error("Company ID not found. Redirecting to login.");
-            navigate("/login");
-            return;
-          }
-          const response = await API.get(`/api/company-registration/${companyId}/`);
-          const data = response.data;
-          setCompanyName(data.company_name);
-          sessionStorage.setItem("companyName", data.company_name);
+          setLoading(false);
+          return; // Skip API call if company name is already stored
         }
+
+        // Retrieve company_id from localStorage and ensure it’s a valid number
+        const companyId = localStorage.getItem("company_id");
+        if (!companyId) {
+          setError("Company ID not found. Please log in again.");
+          navigate("/login");
+          return;
+        }
+
+        // Convert companyId to a number to match the database integer type
+        const numericCompanyId = parseInt(companyId, 10);
+        if (isNaN(numericCompanyId)) {
+          setError("Invalid company ID format. Please log in again.");
+          navigate("/login");
+          return;
+        }
+
+        // Ensure API is configured with authentication if needed
+        const accessToken = localStorage.getItem("access_token");
+        if (accessToken) {
+          API.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+        }
+
+        // Make the API request with the numeric company ID
+        const response = await API.get(`/company-registration/${numericCompanyId}/`);
+        const data = response.data;
+        setCompanyName(data.company_name);
+        sessionStorage.setItem("companyName", data.company_name);
       } catch (error) {
-        console.error("Error fetching company data:", error);
+        console.error("Error fetching company data or inquiries:", error);
+        if (error.response) {
+          if (error.response.status === 404) {
+            setError("Company not found. Please check your company ID or log in again.");
+            // Optionally, redirect to a page to re-enter or verify company details
+            navigate("/login");
+          } else if (error.response.status === 401 || error.response.status === 403) {
+            setError("Unauthorized access. Please log in again.");
+            navigate("/login");
+          } else {
+            setError("An error occurred while loading data. Please try again.");
+          }
+        } else {
+          setError("No response from server. Please check your connection and try again.");
+        }
       } finally {
         setLoading(false);
       }
@@ -80,19 +114,36 @@ const CompanyDashboard = () => {
     setTabIndex(newIndex);
   };
 
-  // Handle form submission from CDConsultingInquiryForm
-  // const handleFormSubmit = (formData) => {
-  //   setInquiries([...inquiries, formData]); // Add new inquiry to the list
-  // };
+  // Handle form submission (e.g., from InquiriesList or another form component)
+  const handleFormSubmit = (formData) => {
+    setInquiries(prev => [...prev, formData]); // Add new inquiry to the list
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    // Remove tokens and company ID from localStorage
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("company_id");
+    
+    // Clear session storage for companyName
+    sessionStorage.removeItem("companyName");
+
+    // Optionally clear API authorization header (if using Axios)
+    delete API.defaults.headers.common["Authorization"];
+
+    // Navigate to login page
+    navigate("/login");
+  };
 
   if (loading) {
     return (
       <Box
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh' 
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
         }}
       >
         <CircularProgress />
@@ -105,12 +156,28 @@ const CompanyDashboard = () => {
       {/* Top Navigation Bar */}
       <AppBar position="static" sx={{ backgroundColor: '#2196f3', zIndex: 1201 }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography variant="h6">Welcome, {companyName}</Typography>
-          <Button color="inherit" sx={{ textTransform: 'uppercase' }}>
+          <Typography variant="h6">Welcome, {companyName || "Guest"}</Typography>
+          <Button 
+            color="inherit" 
+            sx={{ textTransform: 'uppercase' }} 
+            onClick={handleLogout}
+            startIcon={<LogoutIcon />}
+          >
             Logout
           </Button>
         </Toolbar>
       </AppBar>
+
+      {/* Error Display (if any) */}
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ m: 2 }} 
+          onClose={() => setError(null)}
+        >
+          {error}
+        </Alert>
+      )}
 
       {/* Main Content Wrapper */}
       <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -120,13 +187,14 @@ const CompanyDashboard = () => {
             width: 240,
             backgroundColor: '#fff',
             borderRight: '1px solid #ddd',
-            overflowY: 'auto', // Allow sidebar to scroll if content exceeds height
+            overflowY: 'auto',
+            flexShrink: 0,
           }}
         >
           <List>
-            <ListItem 
-              button 
-              selected={tabIndex === 0} 
+            <ListItem
+              button
+              selected={tabIndex === 0}
               onClick={() => handleMenuClick(0)}
             >
               <ListItemIcon>
@@ -135,9 +203,9 @@ const CompanyDashboard = () => {
               <ListItemText primary="Dashboard" />
             </ListItem>
 
-            <ListItem 
-              button 
-              selected={tabIndex === 1} 
+            <ListItem
+              button
+              selected={tabIndex === 1}
               onClick={() => handleMenuClick(1)}
             >
               <ListItemIcon>
@@ -146,9 +214,9 @@ const CompanyDashboard = () => {
               <ListItemText primary="Manage Services" />
             </ListItem>
 
-            <ListItem 
-              button 
-              selected={tabIndex === 2} 
+            <ListItem
+              button
+              selected={tabIndex === 2}
               onClick={() => handleMenuClick(2)}
             >
               <ListItemIcon>
@@ -157,9 +225,9 @@ const CompanyDashboard = () => {
               <ListItemText primary="Manage Materials" />
             </ListItem>
 
-            <ListItem 
-              button 
-              selected={tabIndex === 3} 
+            <ListItem
+              button
+              selected={tabIndex === 3}
               onClick={() => handleMenuClick(3)}
             >
               <ListItemIcon>
@@ -168,9 +236,9 @@ const CompanyDashboard = () => {
               <ListItemText primary="Appointments" />
             </ListItem>
 
-            <ListItem 
-              button 
-              selected={tabIndex === 4} 
+            <ListItem
+              button
+              selected={tabIndex === 4}
               onClick={() => handleMenuClick(4)}
             >
               <ListItemIcon>
@@ -179,9 +247,9 @@ const CompanyDashboard = () => {
               <ListItemText primary="Documents" />
             </ListItem>
 
-            <ListItem 
-              button 
-              selected={tabIndex === 5} 
+            <ListItem
+              button
+              selected={tabIndex === 5}
               onClick={() => handleMenuClick(5)}
             >
               <ListItemIcon>
@@ -190,10 +258,9 @@ const CompanyDashboard = () => {
               <ListItemText primary="Profile Settings" />
             </ListItem>
 
-            {/* New Menu Item for Company Upload Form */}
-            <ListItem 
-              button 
-              selected={tabIndex === 6} 
+            <ListItem
+              button
+              selected={tabIndex === 6}
               onClick={() => handleMenuClick(6)}
             >
               <ListItemIcon>
@@ -202,10 +269,9 @@ const CompanyDashboard = () => {
               <ListItemText primary="Upload Company Details" />
             </ListItem>
 
-            {/* New Menu Item for Inquiries */}
-            <ListItem 
-              button 
-              selected={tabIndex === 7} 
+            <ListItem
+              button
+              selected={tabIndex === 7}
               onClick={() => handleMenuClick(7)}
             >
               <ListItemIcon>
@@ -217,26 +283,23 @@ const CompanyDashboard = () => {
         </Box>
 
         {/* Main Content Area */}
-        <Box 
-          sx={{ 
-            flex: 1, 
-            overflowY: 'auto', // Allow main content to scroll
-            backgroundColor: '#f5f5f5', 
-            position: 'relative', 
-            p: 2, 
-            marginRight: tabIndex === 0 ? '300px' : '0' // Adjust margin based on tabIndex
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: 'auto',
+            backgroundColor: '#f5f5f5',
+            p: 2,
+            position: 'relative',
           }}
         >
-          <Container 
-            sx={{ 
-              py: 3, 
-              maxWidth: '100% !important', 
+          <Container
+            sx={{
+              py: 3,
+              maxWidth: '100% !important',
             }}
           >
-            {/* Dashboard (Tab 0) */}
             {tabIndex === 0 && (
               <Box>
-                {/* Metrics Cards */}
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={4}>
                     <Paper
@@ -287,13 +350,12 @@ const CompanyDashboard = () => {
                         Total Revenue
                       </Typography>
                       <Typography variant="h4" sx={{ mt: 1 }}>
-                        $50,000
+                        RS. 50,000
                       </Typography>
                     </Paper>
                   </Grid>
                 </Grid>
 
-                {/* Analytics Section */}
                 <Box mt={4}>
                   <Typography variant="h6" gutterBottom>
                     Revenue and Appointments Analytics
@@ -305,7 +367,6 @@ const CompanyDashboard = () => {
                   </Paper>
                 </Box>
 
-                {/* Quick Actions */}
                 <Box mt={4}>
                   <Typography variant="h6" gutterBottom>
                     Quick Actions
@@ -321,8 +382,9 @@ const CompanyDashboard = () => {
                           textTransform: 'uppercase',
                           '&:hover': { backgroundColor: '#1976d2' },
                         }}
+                        onClick={() => handleMenuClick(1)}
                       >
-                        Add New Service
+                        + Add New Service
                       </Button>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
@@ -335,8 +397,9 @@ const CompanyDashboard = () => {
                           textTransform: 'uppercase',
                           '&:hover': { backgroundColor: '#1976d2' },
                         }}
+                        onClick={() => handleMenuClick(2)}
                       >
-                        Add New Material
+                        + Add New Material
                       </Button>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
@@ -349,8 +412,9 @@ const CompanyDashboard = () => {
                           textTransform: 'uppercase',
                           '&:hover': { backgroundColor: '#1976d2' },
                         }}
+                        onClick={() => handleMenuClick(3)}
                       >
-                        View Appointments
+                        □ View Appointments
                       </Button>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
@@ -363,14 +427,14 @@ const CompanyDashboard = () => {
                           textTransform: 'uppercase',
                           '&:hover': { backgroundColor: '#1976d2' },
                         }}
+                        onClick={() => handleMenuClick(4)}
                       >
-                        Generate Document
+                        □ Generate Document
                       </Button>
                     </Grid>
                   </Grid>
                 </Box>
 
-                {/* Notifications */}
                 <Box mt={4}>
                   <Typography variant="h6" gutterBottom>
                     Notifications
@@ -409,37 +473,36 @@ const CompanyDashboard = () => {
               </Box>
             )}
 
-            {/* Other Tabs Content */}
             {tabIndex === 1 && <ServicesManagement />}
             {tabIndex === 2 && <MaterialsManagement />}
             {tabIndex === 3 && <Appointments />}
             {tabIndex === 4 && <Documents />}
             {tabIndex === 5 && <ProfileSettings />}
-            {tabIndex === 6 && <CompanyUploadForm />}
+            {tabIndex === 6 && <CompanyUploadForm onSubmit={handleFormSubmit} />}
             {tabIndex === 7 && <InquiriesList inquiries={inquiries.length > 0 ? inquiries : undefined} />}
-           {/* New Tab for Inquiries */}
           </Container>
         </Box>
 
-        {/* Recent Activity Sidebar (fixed on the right) - Only for Dashboard */}
         {tabIndex === 0 && (
           <Box
-            sx={{ 
-              width: 300, 
-              backgroundColor: '#f0f0f0', 
-              borderLeft: '1px solid #ddd', 
-              p: 2, 
-              position: 'fixed', 
-              right: 0, 
-              top: 64, 
-              bottom: 0, 
-              overflowY: 'auto', 
+            sx={{
+              width: 300,
+              backgroundColor: '#f0f0f0',
+              borderLeft: '1px solid #ddd',
+              p: 2,
+              position: 'sticky',
+              right: 0,
+              top: 64,
+              bottom: 0,
+              overflowY: 'auto',
+              zIndex: 1000,
+              height: 'calc(100vh - 64px)',
+              boxShadow: '-2px 0 5px rgba(0,0,0,0.1)',
             }}
           >
             <Typography variant="h6" gutterBottom>
               Recent Activity
             </Typography>
-            {/* Add your recent activity content here */}
           </Box>
         )}
       </Box>
