@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from ersathi.views import  RentVerificationAdminView, RentVerificationCreateView,RentVerificationListView, RentVerificationUserUpdateView,  ServiceList, Test,  get_user_profile, user_verification_status, verify_khalti_payment #CreateProduct 
+from ersathi.views import  RentVerificationAdminView, RentVerificationCreateView,RentVerificationListView, RentVerificationUserUpdateView,  ServiceList, Test, create_company_service, delete_company_service, get_company_services,  get_user_profile, update_company_service, user_verification_status, verify_khalti_payment #CreateProduct 
 from ersathi.views import SignupView, LoginView
 from django.urls import path, include
 from ersathi.views import ForgotPasswordView
@@ -36,6 +36,15 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/services/', get_services, name='get_services'),
+    #company service 
+    path('api/company-services/', get_company_services, name='get_company_services'),  # List company services
+    path('api/company-services/', create_company_service, name='create_company_service'),  # Create company service
+    path('api/company-services/<int:service_id>/', update_company_service, name='update_company_service'),  # Update company service
+    path('api/company-services/<int:service_id>/', delete_company_service, name='delete_company_service'),  # Delete company service
+
+
+
+    #auth
     path('api/signup/', SignupView.as_view(), name='signup'),
     path('api/login/', LoginView.as_view(), name='login'),
     path('auth/', include('social_django.urls', namespace='social')),
@@ -59,6 +68,7 @@ urlpatterns = [
     #path('api/products/create/', CreateProduct.as_view(), name='create_product'),
     #path('api/products/<int:pk>/', create_product, name='update_product'), 
     path('api/test/', Test.as_view(), name='create_Test'),
+    path('api/test/<int:pk>/', Test.as_view(), name='update_delete_test'),
     #Cart
     path('api/cart/', get_cart, name='get_cart'),
     path('api/cart/add/', add_to_cart, name='add_to_cart'),
