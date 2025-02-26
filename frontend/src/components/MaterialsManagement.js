@@ -24,44 +24,9 @@ import { Edit, Delete } from "@mui/icons-material";
 import API from "../services/api";
 
 const MaterialsManagement = () => {
-  const [companyName, setCompanyName] = useState("");
-
-  useEffect(() => {
-    // Simulate retrieving the company name on login
-    const loggedInCompany = "Boy Construction"; 
-    setCompanyName(loggedInCompany);
-  }, []);
-
-  const [materials, setMaterials] = useState([
-    {
-      id: 1,
-      title: "Total Station",
-      category: "Renting",
-      price: 1500,
-      perDayRent: 1500,
-      discountPercentage: 0,
-      company: "Boy Construction",
-      isAvailable: false,
-      createdAt: "Jan 31, 2025, 7:18 a.m.",
-      image: "totalstation.png",
-    },
-    {
-      id: 2,
-      title: "Tripod",
-      category: "Renting",
-      price: 300,
-      perDayRent: 300,
-      discountPercentage: 5,
-      company: "Brother Construction Point",
-      isAvailable: true,
-      createdAt: "Jan 31, 2025, 7:18 a.m.",
-      image: "tripod.png",
-    },
-  ]);
-
+  const [companyId, setCompanyId] = useState(null); // Store company_id instead of companyName
+  const [materials, setMaterials] = useState([]);
   const [open, setOpen] = useState(false);
-
-  // *** 1) Make category default to empty (so the user must pick) ***
   const [newMaterial, setNewMaterial] = useState({
     title: "",
     description: "",
@@ -71,13 +36,81 @@ const MaterialsManagement = () => {
     discountPercentage: "",
     company: "",
     isAvailable: true,
+    id: null, // For editing existing materials
   });
 
-  const handleOpen = () => setOpen(true);
+  // Fetch company ID and materials on mount
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const storedCompanyId = localStorage.getItem("company_id");
+        if (!storedCompanyId) {
+          console.error("Company ID not found. Please log in again.");
+          return;
+        }
+
+        const numericCompanyId = parseInt(storedCompanyId, 10);
+        if (isNaN(numericCompanyId)) {
+          console.error("Invalid company ID format. Please log in again.");
+          return;
+        }
+
+        setCompanyId(numericCompanyId);
+        fetchMaterials(numericCompanyId);
+      } catch (error) {
+        console.error("Error fetching company or materials data:", error);
+      }
+    };
+    loadInitialData();
+  }, []);
+
+  // Fetch materials for the logged-in company's ID using /api/test/
+  const fetchMaterials = async (companyId) => {
+    if (!companyId) {
+      console.error("No company ID available to fetch materials.");
+      return;
+    }
+    try {
+      const response = await API.get(`/api/test/?company_id=${companyId}`);
+      if (response.status === 200) {
+        setMaterials(response.data);
+      } else {
+        console.error("Failed to fetch materials:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching materials:", error);
+    }
+  };
+
+  const handleOpen = () => {
+    // Reset form and ensure company name is set to the logged-in company
+    setNewMaterial({
+      title: "",
+      description: "",
+      price: "",
+      category: "",
+      perDayRent: "",
+      discountPercentage: "",
+      company: companyId,
+      isAvailable: true,
+      id: null,
+    });
+    setOpen(true);
+  };
+
   const handleClose = () => {
     setOpen(false);
-    // Optionally reset form here if you like:
-    // setNewMaterial({...initialState});
+    setNewMaterial({
+      title: "",
+      description: "",
+      price: "",
+      category: "",
+      perDayRent: "",
+      discountPercentage: "",
+      company: companyId || "", // Use companyId
+      isAvailable: true,
+      id: null,
+    });
   };
 
   const handleFileChange = (e) => {
@@ -92,23 +125,24 @@ const MaterialsManagement = () => {
     const { name, value, type, checked } = e.target;
     setNewMaterial((prevMaterial) => ({
       ...prevMaterial,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? checked : name === "category" ? value : value,
     }));
   };
 
-  // *** 2) Updated handleAddMaterial for validation + no auto‐set of category ***
-  const handleAddMaterial = async () => {
+  const handleAddOrUpdateMaterial = async () => {
     if (!newMaterial.title || !newMaterial.description || !newMaterial.price || !newMaterial.category) {
       alert("Please fill in all required fields.");
       return;
     }
-  
+
     let updatedMaterial = {
       ...newMaterial,
-      category: newMaterial.category.toLowerCase(),  // Ensure category is lowercase
+      // category: newMaterial.category.toLowerCase(),
       perDayRent: newMaterial.category === "Selling" ? "0" : newMaterial.perDayRent || "0",
+      discountPercentage: newMaterial.discountPercentage || "0",
+      company: companyId, // Use companyId instead of companyName
     };
-  
+
     const formData = new FormData();
     formData.append("title", updatedMaterial.title);
     formData.append("description", updatedMaterial.description);
@@ -118,47 +152,63 @@ const MaterialsManagement = () => {
     formData.append("discountPercentage", updatedMaterial.discountPercentage || "0");
     formData.append("company", updatedMaterial.company);
     formData.append("isAvailable", updatedMaterial.isAvailable);
-  
+
     if (updatedMaterial.image) {
       formData.append("image", updatedMaterial.image, updatedMaterial.image.name);
     }
-  
-    console.log("Sending request:", Object.fromEntries(formData.entries()));
-  
+
     try {
-      const response = await API.post("/api/test/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-  
-      if (response.status === 201) {
-        setMaterials([...materials, response.data]);
+      let response;
+      if (newMaterial.id) {
+        // Update existing material
+        response = await API.put(`/api/test/${newMaterial.id}/`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        // Add new material
+        response = await API.post("/api/test/", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+
+      if (response.status === 201 || response.status === 200) {
+        fetchMaterials(companyId); // Refresh the list with only the logged-in company's materials
         handleClose();
       }
     } catch (error) {
-      console.error("Failed to add material:", error.response?.data || error);
-      alert("Error: Failed to add material. Check server logs.");
+      console.error("Failed to save material:", error.response?.data || error);
+      alert("Error: Failed to save material. Check server logs.");
     }
   };
-  
-  useEffect(() => {
-    const fetchMaterials = async () => {
-      try {
-        const response = await fetch("/api/company-products/");
-        if (response.ok) {
-          const data = await response.json();
-          setMaterials(data);
-        } else {
-          console.error("Failed to fetch materials.");
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      }
-    };
-    fetchMaterials();
-  }, []);
+
+  const handleEditMaterial = (material) => {
+    if (material.company === companyId) {
+      setNewMaterial({
+        ...material,
+        image: null, // Reset image for editing (user can upload a new one if needed)
+      });
+      setOpen(true);
+    } else {
+      alert("You can only edit materials belonging to your company.");
+    }
+  };
 
   const handleDeleteMaterial = (id) => {
-    setMaterials(materials.filter((material) => material.id !== id));
+    const materialToDelete = materials.find((material) => material.id === id);
+    if (materialToDelete.company === companyId) {
+      if (window.confirm("Are you sure you want to delete this material?")) {
+        API.delete(`/api/test/${id}/`)
+          .then(() => {
+            setMaterials(materials.filter((material) => material.id !== id));
+          })
+          .catch((error) => {
+            console.error("Failed to delete material:", error);
+            alert("Error: Failed to delete material.");
+          });
+      }
+    } else {
+      alert("You can only delete materials belonging to your company.");
+    }
   };
 
   return (
@@ -176,8 +226,9 @@ const MaterialsManagement = () => {
           <TableHead>
             <TableRow>
               <TableCell>Title</TableCell>
-              <TableCell>Category</TableCell>
               <TableCell>Price</TableCell>
+              <TableCell>Category</TableCell>
+              <TableCell>Per Day Rent</TableCell>
               <TableCell>Discount (%)</TableCell>
               <TableCell>Company</TableCell>
               <TableCell>Is Available</TableCell>
@@ -199,7 +250,7 @@ const MaterialsManagement = () => {
                 </TableCell>
                 <TableCell>{material.createdAt}</TableCell>
                 <TableCell>
-                  <IconButton color="primary">
+                  <IconButton color="primary" onClick={() => handleEditMaterial(material)}>
                     <Edit />
                   </IconButton>
                   <IconButton
@@ -216,7 +267,7 @@ const MaterialsManagement = () => {
       </TableContainer>
 
       <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>Add New Material</DialogTitle>
+        <DialogTitle>{newMaterial.id ? "Edit Material" : "Add New Material"}</DialogTitle>
         <DialogContent>
           <TextField
             label="Title"
@@ -243,12 +294,14 @@ const MaterialsManagement = () => {
             onChange={handleChange}
           />
 
-          {/* 3) Category starts blank, user must pick Renting or Selling */}
+          <Typography variant="body1" gutterBottom> {/* Add label for Select */}
+           
+          </Typography>
           <Select
             name="category"
             fullWidth
             margin="normal"
-            value={newMaterial.category}
+            value={newMaterial.category || ""} // Ensure it's an empty string if undefined
             onChange={handleChange}
             displayEmpty
           >
@@ -259,7 +312,6 @@ const MaterialsManagement = () => {
             <MenuItem value="Selling">Selling</MenuItem>
           </Select>
 
-          {/* 4) If category is Selling, disable Per Day Rent */}
           <TextField
             label="Per Day Rent"
             name="perDayRent"
@@ -284,13 +336,12 @@ const MaterialsManagement = () => {
           </Typography>
           <input type="file" onChange={handleFileChange} />
 
-          {/* 5) Company is read-only, from logged in user */}
           <TextField
             label="Company"
             name="company"
             fullWidth
             margin="normal"
-            value={companyName}
+            value={newMaterial.company || companyId || "Default Company"} // Ensure company name is always displayed
             disabled
           />
 
@@ -305,8 +356,8 @@ const MaterialsManagement = () => {
           <Button onClick={handleClose} color="secondary">
             Cancel
           </Button>
-          <Button onClick={handleAddMaterial} color="primary">
-            Save
+          <Button onClick={handleAddOrUpdateMaterial} color="primary">
+            {newMaterial.id ? "Update" : "Add"}
           </Button>
         </DialogActions>
       </Dialog>

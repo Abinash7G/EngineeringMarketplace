@@ -31,6 +31,10 @@ const Login = () => {
             localStorage.setItem("access_token", access);
             localStorage.setItem("refresh_token", refresh);
             localStorage.setItem("company_id", company_id);
+            // Store access & refresh tokens in session storage
+            sessionStorage.setItem("access_token", access);
+            sessionStorage.setItem("refresh_token", refresh);
+            sessionStorage.setItem("company_id", company_id);
             
             //  Set Axios default header for all future requests
             API.defaults.headers.common["Authorization"] = `Bearer ${access}`;
