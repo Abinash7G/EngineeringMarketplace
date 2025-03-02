@@ -1294,29 +1294,14 @@ def verify_khalti_payment(request):
 
 # ersathi/views.py# ersathi/views.py
 # ersathi/views.py
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .models import CompanyInfo, Company, ProjectInfo, TeamMemberInfo
+from .models import CompanyInfo, Company
 from .serializers import CompanyInfoSerializer
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
-# ... (other imports and views remain unchanged)
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-@authentication_classes([JWTAuthentication])
-def get_company_info(request, pk):
-    try:
-        company = Company.objects.get(id=pk, customuser=request.user)
-        company_info = get_object_or_404(CompanyInfo, company=company)
-        serializer = CompanyInfoSerializer(company_info)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except Company.DoesNotExist:
-        return Response({"error": "Company not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
-
+from rest_framework.decorators import action
 
 class CompanyInfoViewSet(viewsets.ModelViewSet):
     serializer_class = CompanyInfoSerializer
@@ -1326,55 +1311,46 @@ class CompanyInfoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return CompanyInfo.objects.filter(company__customuser=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        company_id = request.data.get('company')
+        if not company_id:
+            return Response({"error": "Company ID is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            company = Company.objects.get(id=company_id, customuser=self.request.user)
+        except Company.DoesNotExist:
+            return Response({"error": "Invalid company ID or unauthorized"}, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-@authentication_classes([JWTAuthentication])
-def update_company_info(request, pk):
-    try:
-        company = Company.objects.get(id=pk, customuser=request.user)
-        company_info = get_object_or_404(CompanyInfo, company=company)
-        serializer = CompanyInfoSerializer(company_info, data=request.data, partial=True)
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(company=company)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk=None):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    except Company.DoesNotExist:
-        return Response({"error": "Company not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
 
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-@authentication_classes([JWTAuthentication])
-def delete_project(request, pk, project_id):
-    try:
-        company = Company.objects.get(id=pk, customuser=request.user)
-        company_info = get_object_or_404(CompanyInfo, company=company)
-        project = get_object_or_404(ProjectInfo, id=project_id, company=company_info)
-        project.delete()
-        return Response({"message": "Project deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
-    except Company.DoesNotExist:
-        return Response({"error": "Company not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
-    except ProjectInfo.DoesNotExist:
-        return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
-    except ValueError:
-        return Response({"error": "Project ID must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=True, methods=['delete'], url_path='projects/(?P<project_id>[0-9]+)')
+    def delete_project(self, request, pk=None, project_id=None):
+        company_info = self.get_object()
+        try:
+            project = get_object_or_404(ProjectInfo, id=int(project_id), company=company_info)
+            project.delete()
+            return Response({"message": "Project deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        except ValueError:
+            return Response({"error": "Project ID must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-@authentication_classes([JWTAuthentication])
-def delete_team_member(request, pk, member_id):
-    try:
-        company = Company.objects.get(id=pk, customuser=request.user)
-        company_info = get_object_or_404(CompanyInfo, company=company)
-        member = get_object_or_404(TeamMemberInfo, id=member_id, company=company_info)
-        member.delete()
-        return Response({"message": "Team member deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
-    except Company.DoesNotExist:
-        return Response({"error": "Company not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
-    except TeamMemberInfo.DoesNotExist:
-        return Response({"error": "Team member not found"}, status=status.HTTP_404_NOT_FOUND)
-    except ValueError:
-        return Response({"error": "Member ID must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
-
-# ... (other views remain unchanged)
+    @action(detail=True, methods=['delete'], url_path='team/(?P<member_id>[0-9]+)')
+    def delete_team_member(self, request, pk=None, member_id=None):
+        company_info = self.get_object()
+        try:
+            member = get_object_or_404(TeamMemberInfo, id=int(member_id), company=company_info)
+            member.delete()
+            return Response({"message": "Team member deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        except ValueError:
+            return Response({"error": "Member ID must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
