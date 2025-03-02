@@ -83,48 +83,81 @@ from django.http import JsonResponse
 from .models import ServiceCategory, Service, CompanyServices
 from django.core.exceptions import ObjectDoesNotExist
 
+@csrf_exempt
 def get_services(request):
-    """Returns services grouped by categories"""
-    categories = ServiceCategory.objects.prefetch_related("services").all()
-    data = [
-        {
-            "category": category.name,
-            "services": [{"id": service.id, "name": service.name} for service in category.services.all()]
-        }
-        for category in categories
-    ]
-    return JsonResponse(data, safe=False)
-
-
+    """Returns all service categories and their sub-services"""
+    try:
+        categories = ServiceCategory.objects.all().prefetch_related('services')
+        data = [
+            {
+                "category": category.name,
+                "services": [
+                    {"id": service.id, "name": service.name}
+                    for service in category.services.all()
+                ]
+            }
+            for category in categories
+        ]
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        logger.error(f"Error in get_services: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=400)
 ###
 # #
 # #
 # #compayadded service
 ##
-##
-@csrf_exempt
+##from django.http import JsonResponse
+# views.py
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from django.core.exceptions import ObjectDoesNotExist
+from .models import CompanyServices, Service
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from .models import Company  # Import the Company model
+import logging
 
+logger = logging.getLogger(__name__)
+
+@csrf_exempt
 def get_company_services(request):
     """Returns all services added by the company"""
     try:
-        # Get company/user from token or session (assuming authentication via token)
-        user = request.user  # This requires authentication middleware or token decoding
+        auth = JWTAuthentication()
+        header = request.META.get('HTTP_AUTHORIZATION', '')
+        if not header.startswith('Bearer '):
+            return JsonResponse({"error": "Invalid authorization header"}, status=401)
+        
+        token = header.split(' ')[1]
+        validated_token = auth.get_validated_token(token)
+        user = auth.get_user(validated_token)
+
         if not user.is_authenticated:
             return JsonResponse({"error": "Authentication required"}, status=401)
 
-        services = CompanyServices.objects.filter(company=user).select_related('service__category')
+        # Get the company associated with the user
+        try:
+            company = Company.objects.get(id=user.company_id)  # Use company_id from ersathi_customuser
+        except ObjectDoesNotExist:
+            return JsonResponse({"error": "Company not found for this user"}, status=404)
+
+        services = CompanyServices.objects.filter(company=company).select_related('service__category')
         data = [
             {
                 "id": service.id,
                 "category": service.service.category.name,
                 "sub_service": service.service.name,
                 "price": float(service.price),
-                "status": service.status
+                "status": service.status,
+                "company_id": service.company.id,
+                "service_id": service.service.id
             }
             for service in services
         ]
         return JsonResponse(data, safe=False)
     except Exception as e:
+        logger.error(f"Error in get_company_services: {str(e)}")
         return JsonResponse({"error": str(e)}, status=400)
 
 @csrf_exempt
@@ -133,27 +166,72 @@ def create_company_service(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            user = request.user  # Get authenticated user/company
+            logger.debug(f"Received data: {data}")
+            auth = JWTAuthentication()
+            header = request.META.get('HTTP_AUTHORIZATION', '')
+            if not header.startswith('Bearer '):
+                return JsonResponse({"error": "Invalid authorization header"}, status=401)
+            
+            token = header.split(' ')[1]
+            validated_token = auth.get_validated_token(token)
+            user = auth.get_user(validated_token)
+
             if not user.is_authenticated:
                 return JsonResponse({"error": "Authentication required"}, status=401)
 
-            service = Service.objects.get(id=data.get('service_id'))  # Get service by ID from dropdown
-            company_service = CompanyServices.objects.create(
-                company=user,
-                service=service,
-                price=data['price'],
-                status=data['status']
-            )
-            return JsonResponse({
-                "id": company_service.id,
-                "category": company_service.service.category.name,
-                "sub_service": company_service.service.name,
-                "price": float(company_service.price),
-                "status": company_service.status
-            })
+            service_id = data.get('service_id')
+            if not service_id:
+                return JsonResponse({"error": "Service ID is required"}, status=400)
+
+            try:
+                service = Service.objects.get(id=service_id)
+                logger.debug(f"Found service: {service.name}, ID: {service.id}, Category: {service.category.name}")
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Service not found"}, status=404)
+
+            # Get the company associated with the user using company_id from ersathi_customuser
+            try:
+                company = Company.objects.get(id=user.company_id)  # Use company_id from the user
+                if not company:
+                    return JsonResponse({"error": "Company not found for this user"}, status=404)
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Company not found for this user"}, status=404)
+
+            try:
+                company_service, created = CompanyServices.objects.get_or_create(
+                    company=company,  # Use the Company instance
+                    service=service,
+                    defaults={
+                        'price': data['price'],
+                        'status': data['status']
+                    }
+                )
+                if not created:
+                    company_service.price = data['price']
+                    company_service.status = data['status']
+                    company_service.save()
+                    logger.info(f"Updated existing service for company {company.id}, service {service.id}")
+                else:
+                    logger.info(f"Created new service for company {company.id}, service {service.id}")
+
+                return JsonResponse({
+                    "id": company_service.id,
+                    "category": company_service.service.category.name,
+                    "sub_service": company_service.service.name,
+                    "price": float(company_service.price),
+                    "status": company_service.status,
+                    "company_id": company_service.company.id,  # Return the actual company_id
+                    "service_id": company_service.service.id
+                }, status=201)  # Use 201 for created
+            except Exception as e:
+                logger.error(f"Database error details: {str(e)}")
+                return JsonResponse({"error": f"Database error: {str(e)}"}, status=400)
         except ObjectDoesNotExist:
-            return JsonResponse({"error": "Service not found"}, status=404)
+            return JsonResponse({"error": "Service or company not found"}, status=404)
+        except KeyError as e:
+            return JsonResponse({"error": f"Missing required field: {str(e)}"}, status=400)
         except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}")
             return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({"error": "Method not allowed"}, status=405)
 
@@ -163,26 +241,53 @@ def update_company_service(request, service_id):
     if request.method == 'PUT':
         try:
             data = json.loads(request.body)
-            user = request.user
+            auth = JWTAuthentication()
+            header = request.META.get('HTTP_AUTHORIZATION', '')
+            if not header.startswith('Bearer '):
+                return JsonResponse({"error": "Invalid authorization header"}, status=401)
+            
+            token = header.split(' ')[1]
+            validated_token = auth.get_validated_token(token)
+            user = auth.get_user(validated_token)
+
             if not user.is_authenticated:
                 return JsonResponse({"error": "Authentication required"}, status=401)
 
-            company_service = CompanyServices.objects.get(id=service_id, company=user)
-            service = Service.objects.get(id=data.get('service_id'))  # Get updated service
-            company_service.service = service
-            company_service.price = data['price']
-            company_service.status = data['status']
+            # Get the company associated with the user
+            try:
+                company = Company.objects.get(id=user.company_id)  # Use company_id from ersathi_customuser
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Company not found for this user"}, status=404)
+
+            try:
+                company_service = CompanyServices.objects.get(id=service_id, company=company)
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Service not found or unauthorized"}, status=404)
+
+            if 'service_id' in data:
+                try:
+                    new_service = Service.objects.get(id=data['service_id'])
+                    company_service.service = new_service
+                except ObjectDoesNotExist:
+                    return JsonResponse({"error": "New service not found"}, status=404)
+
+            company_service.price = data.get('price', company_service.price)
+            company_service.status = data.get('status', company_service.status)
             company_service.save()
+
             return JsonResponse({
                 "id": company_service.id,
                 "category": company_service.service.category.name,
                 "sub_service": company_service.service.name,
                 "price": float(company_service.price),
-                "status": company_service.status
+                "status": company_service.status,
+                "company_id": company_service.company.id,
+                "service_id": company_service.service.id
             })
         except ObjectDoesNotExist:
             return JsonResponse({"error": "Service not found or unauthorized"}, status=404)
         except Exception as e:
+            logger.error(f"Error updating service: {str(e)}")
             return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({"error": "Method not allowed"}, status=405)
 
@@ -191,18 +296,73 @@ def delete_company_service(request, service_id):
     """Delete a service for the company"""
     if request.method == 'DELETE':
         try:
-            user = request.user
+            auth = JWTAuthentication()
+            header = request.META.get('HTTP_AUTHORIZATION', '')
+            if not header.startswith('Bearer '):
+                return JsonResponse({"error": "Invalid authorization header"}, status=401)
+            
+            token = header.split(' ')[1]
+            validated_token = auth.get_validated_token(token)
+            user = auth.get_user(validated_token)
+
             if not user.is_authenticated:
                 return JsonResponse({"error": "Authentication required"}, status=401)
 
-            company_service = CompanyServices.objects.get(id=service_id, company=user)
-            company_service.delete()
-            return JsonResponse({"message": "Service deleted successfully"})
-        except ObjectDoesNotExist:
-            return JsonResponse({"error": "Service not found or unauthorized"}, status=404)
+            # Get the company associated with the user
+            try:
+                company = Company.objects.get(id=user.company_id)  # Use company_id from ersathi_customuser
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Company not found for this user"}, status=404)
+
+            try:
+                company_service = CompanyServices.objects.get(id=service_id, company=company)
+                company_service.delete()
+                return JsonResponse({"message": "Service deleted successfully"})
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Service not found or unauthorized"}, status=404)
         except Exception as e:
+            logger.error(f"Error deleting service: {str(e)}")
             return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+    #companyservice view
+@csrf_exempt
+def get_company_services_basic(request):
+    """Returns only category and sub_service for services"""
+    try:
+        auth = JWTAuthentication()
+        header = request.META.get('HTTP_AUTHORIZATION', '')
+        if not header.startswith('Bearer '):
+            return JsonResponse({"error": "Invalid authorization header"}, status=401)
+        
+        token = header.split(' ')[1]
+        validated_token = auth.get_validated_token(token)
+        user = auth.get_user(validated_token)
+
+        if not user.is_authenticated:
+            return JsonResponse({"error": "Authentication required"}, status=401)
+
+        try:
+            company = Company.objects.get(id=user.company_id)
+        except ObjectDoesNotExist:
+            return JsonResponse({"error": "Company not found for this user"}, status=404)
+
+        services = CompanyServices.objects.filter(company=company).select_related('service__category')
+        data = [
+            {
+                "category": service.service.category.name,
+                "sub_service": service.service.name,
+            }
+            for service in services
+        ]
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        logger.error(f"Error in get_company_services_basic: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+
 
 # Dynamically get the user model
 CustomUser = get_user_model()
@@ -490,20 +650,24 @@ def reject_company(request, pk):
 #     except Company.DoesNotExist:
 #         return Response({'error': 'Company not found'}, status=404)  # Handle company not found
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+from django.http import JsonResponse
+from .models import Company  
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_company_details(request, pk):
     try:
         company = Company.objects.get(id=pk)  # Fetch company by ID
         return JsonResponse({
-            'company_name': company.company_name,  # Adjust field name if different
-        })
+            'company_name': company.company_name,
+            'company_email': company.company_email,
+            'location': company.location,
+        }, status=200)
     except Company.DoesNotExist:
         return JsonResponse({'error': 'Company not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
-
 
 
 class ServiceList(APIView):
@@ -514,7 +678,6 @@ class ServiceList(APIView):
         serializer = ServiceSerializer(services, many=True)
         # Return serialized data as a response
         return Response(serializer.data)
-
 
 
 #Userprofile 
@@ -1123,3 +1286,95 @@ def verify_khalti_payment(request):
 #             return JsonResponse({"message": "Unknown status received."}, status=400)
     
 #     return JsonResponse({"message": "Invalid request method."}, status=405)
+
+
+
+##############
+##companyinfo##
+
+# ersathi/views.py# ersathi/views.py
+# ersathi/views.py
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from .models import CompanyInfo, Company, ProjectInfo, TeamMemberInfo
+from .serializers import CompanyInfoSerializer
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+# ... (other imports and views remain unchanged)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def get_company_info(request, pk):
+    try:
+        company = Company.objects.get(id=pk, customuser=request.user)
+        company_info = get_object_or_404(CompanyInfo, company=company)
+        serializer = CompanyInfoSerializer(company_info)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Company.DoesNotExist:
+        return Response({"error": "Company not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CompanyInfoViewSet(viewsets.ModelViewSet):
+    serializer_class = CompanyInfoSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get_queryset(self):
+        return CompanyInfo.objects.filter(company__customuser=self.request.user)
+
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def update_company_info(request, pk):
+    try:
+        company = Company.objects.get(id=pk, customuser=request.user)
+        company_info = get_object_or_404(CompanyInfo, company=company)
+        serializer = CompanyInfoSerializer(company_info, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Company.DoesNotExist:
+        return Response({"error": "Company not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def delete_project(request, pk, project_id):
+    try:
+        company = Company.objects.get(id=pk, customuser=request.user)
+        company_info = get_object_or_404(CompanyInfo, company=company)
+        project = get_object_or_404(ProjectInfo, id=project_id, company=company_info)
+        project.delete()
+        return Response({"message": "Project deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    except Company.DoesNotExist:
+        return Response({"error": "Company not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+    except ProjectInfo.DoesNotExist:
+        return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+    except ValueError:
+        return Response({"error": "Project ID must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def delete_team_member(request, pk, member_id):
+    try:
+        company = Company.objects.get(id=pk, customuser=request.user)
+        company_info = get_object_or_404(CompanyInfo, company=company)
+        member = get_object_or_404(TeamMemberInfo, id=member_id, company=company_info)
+        member.delete()
+        return Response({"message": "Team member deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    except Company.DoesNotExist:
+        return Response({"error": "Company not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+    except TeamMemberInfo.DoesNotExist:
+        return Response({"error": "Team member not found"}, status=status.HTTP_404_NOT_FOUND)
+    except ValueError:
+        return Response({"error": "Member ID must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+
+# ... (other views remain unchanged)

@@ -2,14 +2,15 @@ from django.contrib import admin
 
 # Register your models here.
 from django.contrib import admin
-from .models import Service, ServiceCategory
+from .models import CompanyServices, Service, ServiceCategory
 from .models import Product
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')  # Customize this to show fields in the admin table
+    list_display = ('id', 'name', 'category')
     
 admin.site.register(ServiceCategory)
+admin.site.register(CompanyServices)
     
 from .models import CustomUser, Company
 
@@ -29,3 +30,4 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = ('title', 'category', 'price', 'company', 'is_available', 'created_at')  # Ensure 'company' exists in the Product model
     list_filter = ('category', 'is_available')
     search_fields = ('title', 'description', 'company__name')  # If 'company' has a name field
+    
