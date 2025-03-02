@@ -4,38 +4,8 @@ import uuid
 from django.contrib.auth.models import AbstractUser
 from django.forms import ValidationError
 
-# Service Model
-from django.db import models
 
-class ServiceCategory(models.Model):
-    name = models.CharField(max_length=255, unique=True)
 
-    def __str__(self):
-        return self.name
-
-class Service(models.Model):
-    name = models.CharField(max_length=255)
-    category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE, related_name="services", default=1)  # Default category ID
-
-    def __str__(self):
-        return f"{self.name} ({self.category.name})"
-
-# from django.contrib.auth.models import User  # Import User directly
-from django.conf import settings
-# CompanyServices Model for company-specific services
-class CompanyServices(models.Model):
-    company = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="company_services")  # Use settings.AUTH_USER_MODEL
-    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="company_services")  # Link to the generic service
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Price in Nepali Rupees
-    status = models.CharField(max_length=20, default="Available", choices=[("Available", "Available"), ("Unavailable", "Unavailable")])  # Availability status
-    created_at = models.DateTimeField(auto_now_add=True)  # Timestamp for creation
-    updated_at = models.DateTimeField(auto_now=True)  # Timestamp for updates
-
-    def __str__(self):
-        return f"{self.company.username}'s {self.service.name} - Rs.{self.price} ({self.status})"
-
-    class Meta:
-        unique_together = ('company', 'service')  # Ensure a company can't add the same service twice
 
 # Define company type choices
 COMPANY_TYPE_CHOICES = [
@@ -60,6 +30,38 @@ class Company(models.Model):
 
     def __str__(self):
         return self.company_name
+
+# Service Model
+from django.db import models
+from django.conf import settings
+
+class ServiceCategory(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Service(models.Model):
+    name = models.CharField(max_length=255)
+    category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE, related_name="services")
+
+    def __str__(self):
+        return f"{self.name} ({self.category.name})"
+
+class CompanyServices(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="company_services")  # Link to ersathi_company
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="company_services")  # Link to ersathi_service
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Price in Nepali Rupees
+    status = models.CharField(max_length=20, default="Available", choices=[("Available", "Available"), ("Unavailable", "Unavailable")])  # Availability status
+    created_at = models.DateTimeField(auto_now_add=True)  # Timestamp for creation
+    updated_at = models.DateTimeField(auto_now=True)  # Timestamp for updates
+
+    def __str__(self):
+        return f"{self.company.company_name}'s {self.service.name} - Rs.{self.price} ({self.status})"
+
+    class Meta:
+        unique_together = ('company', 'service') # Ensure a company can't add the same service twice
+
     
 # Define CustomUser Model
 class CustomUser(AbstractUser):
@@ -97,6 +99,51 @@ class Product(models.Model):
 
     def __str__(self):
         return self.title
+
+#####################
+##COMPANY_INFO####
+#####################
+
+from django.db import models
+from django.contrib.auth.models import User
+
+# CompanyInfo model for additional details
+class CompanyInfo(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='company_info')
+    company_name = models.CharField(max_length=255)
+    company_email = models.EmailField(unique=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    address = models.CharField(max_length=255)
+    logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
+    about_us = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.company_name
+
+class ProjectInfo(models.Model):
+    company = models.ForeignKey(CompanyInfo, on_delete=models.CASCADE, related_name='projects')
+    name = models.CharField(max_length=255)
+    description = models.TextField(max_length=200)
+    year = models.CharField(max_length=20, default="")
+    image = models.ImageField(upload_to='project_images/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+class TeamMemberInfo(models.Model):
+    company = models.ForeignKey(CompanyInfo, on_delete=models.CASCADE, related_name='team_members')
+    name = models.CharField(max_length=255)
+    role = models.CharField(max_length=100)
+    avatar = models.ImageField(upload_to='team_avatars/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+
     
 
 #

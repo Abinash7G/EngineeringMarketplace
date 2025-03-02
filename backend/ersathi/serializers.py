@@ -75,3 +75,67 @@ class RentVerificationSerializer(serializers.ModelSerializer):
             VerificationImage.objects.create(verification=instance, image=image)
         
         return instance
+    
+
+###companyInfofrom rest_framework import serializers
+# ersathi/serializers.py
+from rest_framework import serializers
+from .models import CompanyInfo, ProjectInfo, TeamMemberInfo
+
+class ProjectInfoSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(allow_empty_file=True, required=False)
+
+    class Meta:
+        model = ProjectInfo
+        fields = ['id', 'name', 'description', 'year', 'image']
+
+class TeamMemberInfoSerializer(serializers.ModelSerializer):
+    avatar = serializers.ImageField(allow_empty_file=True, required=False)
+
+    class Meta:
+        model = TeamMemberInfo
+        fields = ['id', 'name', 'role', 'avatar']
+
+class CompanyInfoSerializer(serializers.ModelSerializer):
+    projects = ProjectInfoSerializer(many=True, required=False)
+    team = TeamMemberInfoSerializer(many=True, required=False)
+
+    class Meta:
+        model = CompanyInfo
+        fields = ['id', 'company', 'company_name', 'company_email', 'phone_number', 'address', 'logo', 'about_us', 'projects', 'team']
+
+    def create(self, validated_data):
+        projects_data = validated_data.pop('projects', [])
+        team_data = validated_data.pop('team', [])
+        company_info = CompanyInfo.objects.create(**validated_data)
+
+        for project_data in projects_data:
+            ProjectInfo.objects.create(company=company_info, **project_data)
+        for member_data in team_data:
+            TeamMemberInfo.objects.create(company=company_info, **member_data)
+
+        return company_info
+
+    def update(self, instance, validated_data):
+        projects_data = validated_data.pop('projects', [])
+        team_data = validated_data.pop('team', [])
+
+        instance.company_name = validated_data.get('company_name', instance.company_name)
+        instance.company_email = validated_data.get('company_email', instance.company_email)
+        instance.phone_number = validated_data.get('phone_number', instance.phone_number)
+        instance.address = validated_data.get('address', instance.address)
+        if 'logo' in validated_data:
+            instance.logo = validated_data['logo']
+        instance.about_us = validated_data.get('about_us', instance.about_us)
+        instance.save()
+
+        if projects_data:
+            instance.projects.all().delete()
+            for project_data in projects_data:
+                ProjectInfo.objects.create(company=instance, **project_data)
+        if team_data:
+            instance.team.all().delete()
+            for member_data in team_data:
+                TeamMemberInfo.objects.create(company=instance, **member_data)
+
+        return instance
