@@ -1,81 +1,238 @@
-import React from "react";
-import { Paper, Typography, Grid, TextField, Button, Box, List, ListItem, ListItemAvatar, ListItemText, Divider, Avatar } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { 
+  Paper, 
+  Typography, 
+  Grid, 
+  TextField, 
+  Button, 
+  Box, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow, 
+  IconButton, 
+  CircularProgress, 
+  Avatar,
+  Modal // Added Modal import here
+} from "@mui/material";
+import { Edit, Delete } from "@mui/icons-material";
 import axios from "axios";
 
-const TeamMembersSection = ({ company, setCompany, teamMember, setTeamMember, handleImageUpload }) => {
-  const addTeamMember = () => {
+const TeamMembersSection = ({ token: propToken, companyId: propCompanyId }) => {
+  const companyId = propCompanyId || localStorage.getItem("company_id");
+  const token = propToken || localStorage.getItem("access_token");
+
+  const [teamMember, setTeamMember] = useState({ name: "", role: "", avatar: null });
+  const [teamMembers, setTeamMembers] = useState([]); // State for fetched team members
+  const [openModal, setOpenModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null); // For editing
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Fetch team members on mount
+  useEffect(() => {
+    if (!companyId || !token) {
+      setError("Missing Company ID or Authentication Token. Please log in again.");
+      return;
+    }
+
+    const fetchTeamMembers = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(`http://127.0.0.1:8000/company-info/${companyId}/team/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setTeamMembers(response.data.map(member => ({
+          ...member,
+          avatar: member.avatar ? `http://127.0.0.1:8000${member.avatar}` : null // Adjust URL based on backend
+        })));
+      } catch (error) {
+        console.error("Error fetching team members:", error.response?.data || error.message);
+        setError(`Failed to fetch team members: ${error.response?.data?.error || error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTeamMembers();
+  }, [companyId, token]);
+
+  // Open modal for adding/editing
+  const handleOpenModal = (member = null) => {
+    setSelectedMember(member);
+    setTeamMember(member || { name: "", role: "", avatar: null });
+    setOpenModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setSelectedMember(null);
+    setTeamMember({ name: "", role: "", avatar: null });
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      console.log("Selected file:", file);
+      setTeamMember((prev) => ({ ...prev, avatar: file }));
+    }
+  };
+
+  const handleSubmitTeamMember = async () => {
     if (!teamMember.name || !teamMember.role || !teamMember.avatar) {
       alert("Please fill in all fields for the team member.");
       return;
     }
-    setCompany((prev) => ({
-      ...prev,
-      team: [...prev.team, { id: prev.team.length + 1, ...teamMember }],
-    }));
-    setTeamMember({ name: "", role: "", avatar: "" });
-  };
 
-  const deleteTeamMember = async (memberId) => {
-    const companyInfoId = localStorage.getItem("company_info_id");
-    if (!companyInfoId) {
-      setCompany((prev) => ({
-        ...prev,
-        team: prev.team.filter((member) => member.id !== memberId),
-      }));
+    if (!companyId || !token) {
+      setError("Missing Company ID or Authentication Token. Please log in again.");
       return;
     }
 
+    setLoading(true);
     try {
-      const token = localStorage.getItem("access_token");
-      await axios.delete(
-        `http://127.0.0.1:8000/companyInfo/${companyInfoId}/team/${memberId}/`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setCompany((prev) => ({
-        ...prev,
-        team: prev.team.filter((member) => member.id !== memberId),
-      }));
+      const formData = new FormData();
+      formData.append("name", teamMember.name);
+      formData.append("role", teamMember.role);
+      if (teamMember.avatar instanceof File) formData.append("avatar", teamMember.avatar);
+
+      if (selectedMember) {
+        // Update existing team member
+        const response = await axios.put(`http://127.0.0.1:8000/company-info/${companyId}/team/${selectedMember.id}/`, formData, {
+          headers: { 
+            Authorization: `Bearer ${token}`, 
+            "Content-Type": "multipart/form-data" 
+          },
+        });
+        setTeamMembers(teamMembers.map(m => m.id === selectedMember.id ? {
+          ...response.data,
+          avatar: response.data.avatar ? `http://127.0.0.1:8000${response.data.avatar}` : null
+        } : m));
+      } else {
+        // Create new team member
+        const response = await axios.post(`http://127.0.0.1:8000/company-info/${companyId}/team/`, formData, {
+          headers: { 
+            Authorization: `Bearer ${token}`, 
+            "Content-Type": "multipart/form-data" 
+          },
+        });
+        setTeamMembers([...teamMembers, {
+          ...response.data,
+          avatar: response.data.avatar ? `http://127.0.0.1:8000${response.data.avatar}` : null
+        }]);
+      }
+
+      handleCloseModal();
     } catch (error) {
-      console.error("Error deleting team member:", error);
+      console.error("Error saving team member:", error.response?.data || error.message);
+      setError(`Failed to save team member: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteTeamMember = async (memberId) => {
+    if (!companyId || !token) {
+      setError("Missing Company ID or Authentication Token. Please log in again.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await axios.delete(`http://127.0.0.1:8000/company-info/${companyId}/team/${memberId}/delete/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTeamMembers(teamMembers.filter(m => m.id !== memberId));
+    } catch (error) {
+      console.error("Error deleting team member:", error.response?.data || error.message);
+      setError(`Failed to delete team member: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 4, mb: 4, border: "1px solid #e0e0e0", borderRadius: 2 }}>
-      <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold" }}>Add Team Members</Typography>
-      <Grid container spacing={3}>
-        <Grid item xs={12} sm={6}>
-          <TextField fullWidth label="Name" value={teamMember.name} onChange={(e) => setTeamMember({ ...teamMember, name: e.target.value })} variant="outlined" />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField fullWidth label="Role" value={teamMember.role} onChange={(e) => setTeamMember({ ...teamMember, role: e.target.value })} variant="outlined" />
-        </Grid>
-        <Grid item xs={12}>
-          <Typography variant="body1" sx={{ mb: 1, fontWeight: "bold" }}>Upload Avatar</Typography>
-          <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, (image) => setTeamMember({ ...teamMember, avatar: image }))} style={{ border: "1px solid #ccc", padding: "8px", borderRadius: "4px", width: "100%" }} />
-          {teamMember.avatar && <Box sx={{ mt: 2 }}><Typography variant="body2">Preview:</Typography><img src={teamMember.avatar} alt="Avatar Preview" style={{ width: 100, height: 100, borderRadius: "50%" }} /></Box>}
-        </Grid>
-        <Grid item xs={12}>
-          <Button variant="contained" onClick={addTeamMember} sx={{ backgroundColor: "#007BFF", color: "#fff" }}>Add Team Member</Button>
-        </Grid>
-        {company.team.length > 0 && (
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>Team Members</Typography>
-            <List>
-              {company.team.map((member) => (
-                <React.Fragment key={member.id}>
-                  <ListItem>
-                    <ListItemAvatar><Avatar src={member.avatar} alt={member.name} /></ListItemAvatar>
-                    <ListItemText primary={member.name} secondary={`Role: ${member.role}`} />
-                    <Button color="error" onClick={() => deleteTeamMember(member.id)}>Delete</Button>
-                  </ListItem>
-                  <Divider />
-                </React.Fragment>
-              ))}
-            </List>
+    <Paper elevation={3} sx={{ p: 4, mb: 4, borderRadius: 2 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+        <Typography variant="h5" fontWeight="bold">Add Team Members</Typography>
+        <Button variant="contained" sx={{ backgroundColor: "#007BFF", color: "#fff" }} onClick={() => handleOpenModal()}>
+          ADD TEAM MEMBER
+        </Button>
+      </Box>
+
+      {loading && <CircularProgress />}
+      {error && <Typography color="error">{error}</Typography>}
+
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Role</TableCell>
+              <TableCell>Avatar</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {teamMembers.map((member) => (
+              <TableRow key={member.id}>
+                <TableCell>{member.name}</TableCell>
+                <TableCell>{member.role}</TableCell>
+                <TableCell>
+                  {member.avatar && <Avatar src={member.avatar} alt={member.name} />}
+                </TableCell>
+                <TableCell>
+                  <IconButton onClick={() => handleOpenModal(member)} color="primary">
+                    <Edit />
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteTeamMember(member.id)} color="error">
+                    <Delete />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* MODAL */}
+      <Modal open={openModal} onClose={handleCloseModal}>
+        <Box sx={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+          bgcolor: 'background.paper', boxShadow: 24, p: 4, minWidth: 400, borderRadius: 2
+        }}>
+          <Typography variant="h6" fontWeight="bold">Add/Edit Team Member</Typography>
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth label="Name" value={teamMember.name} onChange={(e) => setTeamMember({ ...teamMember, name: e.target.value })} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth label="Role" value={teamMember.role} onChange={(e) => setTeamMember({ ...teamMember, role: e.target.value })} />
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body1" fontWeight="bold">Upload Avatar</Typography>
+              <input type="file" accept="image/*" onChange={handleFileChange} />
+              {teamMember.avatar && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2">Preview:</Typography>
+                  <Avatar
+                    src={teamMember.avatar instanceof File ? URL.createObjectURL(teamMember.avatar) : teamMember.avatar}
+                    alt="Avatar Preview"
+                    sx={{ width: 100, height: 100, borderRadius: "50%" }}
+                  />
+                </Box>
+              )}
+            </Grid>
+          </Grid>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
+            <Button variant="contained" color="error" onClick={handleCloseModal}>CANCEL</Button>
+            <Button variant="contained" color="primary" onClick={handleSubmitTeamMember} disabled={loading}>
+              {loading ? <CircularProgress size={24} color="inherit" /> : selectedMember ? "UPDATE TEAM MEMBER" : "ADD TEAM MEMBER"}
+            </Button>
           </Box>
-        )}
-      </Grid>
+        </Box>
+      </Modal>
     </Paper>
   );
 };
