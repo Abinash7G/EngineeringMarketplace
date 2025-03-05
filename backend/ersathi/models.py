@@ -105,11 +105,24 @@ class Product(models.Model):
 #####################
 
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 
-# CompanyInfo model for additional details
 class CompanyInfo(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='company_info')
+    customuser = models.ForeignKey(
+        settings.AUTH_USER_MODEL,  # Use settings.AUTH_USER_MODEL instead of User
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='company_infos'
+    )
+
+    company = models.ForeignKey(
+        Company,  # Make sure Company model is imported
+        on_delete=models.CASCADE, 
+        related_name='company_info'
+    )
+    
+    # Rest of your existing fields remain the same
     company_name = models.CharField(max_length=255)
     company_email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
@@ -123,7 +136,11 @@ class CompanyInfo(models.Model):
         return self.company_name
 
 class ProjectInfo(models.Model):
-    company = models.ForeignKey(CompanyInfo, on_delete=models.CASCADE, related_name='projects')
+    company = models.ForeignKey(
+        CompanyInfo,
+        on_delete=models.CASCADE,
+        related_name='projects'
+    )
     name = models.CharField(max_length=255)
     description = models.TextField(max_length=200)
     year = models.CharField(max_length=20, default="")

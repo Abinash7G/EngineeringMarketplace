@@ -10,12 +10,24 @@ from ersathi.views import (
     RentVerificationListView,
     RentVerificationUserUpdateView,
     Test,
+    company_info,
+    company_info_detail,
     create_company_service,
+    
     delete_company_service,
+    delete_project,
+    delete_team_member,
+    
+    
     get_company_services,
     get_company_services_basic,
     get_user_profile,
+    project_list_create,
+    team_member_list_create,
+    
     update_company_service,
+    update_project,
+    update_team_member,
     user_verification_status,
     verify_khalti_payment,
     SignupView,
@@ -39,18 +51,19 @@ from ersathi.views import (
     get_wishlist,
     add_to_wishlist,
     remove_from_wishlist,
-    # New company info views
-    get_company_info,
-    update_company_info,
-    delete_project,
-    delete_team_member,
+  
+   
+   
 )
+
+
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/services/', get_services, name='get_services'),
+
 
     # Auth
     path('api/signup/', SignupView.as_view(), name='signup'),
@@ -68,11 +81,17 @@ urlpatterns = [
     path('api/confirm-email/<str:token>/', ConfirmEmailView.as_view(), name='confirm-email'),
     path('company-registration/<int:pk>/', get_company_details, name='company-details'),
 
-    # CompanyInfo (replacing ViewSet with function-based views)
-    path('companyInfo/<int:pk>/', get_company_info, name='get_company_info'),  # GET
-    path('companyInfo/<int:pk>/update/', update_company_info, name='update_company_info'),  # PUT
-    path('companyInfo/<int:pk>/projects/<int:project_id>/', delete_project, name='delete-project'),  # DELETE
-    path('companyInfo/<int:pk>/team/<int:member_id>/', delete_team_member, name='delete-team-member'),  # DELETE
+    #company info
+    path('company-info/', company_info, name='company-info-list'), #post
+    path('company-info/<int:company_id>/', company_info_detail, name='company-info-detail'),  # Handles GET and PUT
+    #Company/project]
+    path('company-info/<int:company_id>/projects/', project_list_create, name='project-list-create'),
+    path('company-info/<int:company_id>/projects/<int:project_id>/', update_project, name='update-project'),  # PUT update project
+    path('company-info/<int:company_id>/projects/<int:project_id>/delete/', delete_project, name='delete-project'),  # DELETE project
+    #TEAMmember
+    path('company-info/<int:company_id>/team/', team_member_list_create, name='team_member_list_create'),
+    path('company-info/<int:company_id>/team/<int:member_id>/', update_team_member, name='update_team_member'),
+    path('company-info/<int:company_id>/team/<int:member_id>/delete/', delete_team_member, name='delete_team_member'),
 
     # Services
     path('api/company-services/get/', get_company_services, name='get_company_services'),
