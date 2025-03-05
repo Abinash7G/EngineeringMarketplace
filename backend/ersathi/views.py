@@ -1292,65 +1292,194 @@ def verify_khalti_payment(request):
 ##############
 ##companyinfo##
 
-# ersathi/views.py# ersathi/views.py
+# ersathi/views.py
 # ersathi/views.py
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .models import CompanyInfo, Company
-from .serializers import CompanyInfoSerializer
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.decorators import action
 
-class CompanyInfoViewSet(viewsets.ModelViewSet):
-    serializer_class = CompanyInfoSerializer
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+from .models import CompanyInfo, Company, ProjectInfo, TeamMemberInfo
+from .serializers import CompanyInfoSerializer
 
-    def get_queryset(self):
-        return CompanyInfo.objects.filter(company__customuser=self.request.user)
 
-    def create(self, request, *args, **kwargs):
-        company_id = request.data.get('company')
-        if not company_id:
-            return Response({"error": "Company ID is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            company = Company.objects.get(id=company_id, customuser=self.request.user)
-        except Company.DoesNotExist:
-            return Response({"error": "Invalid company ID or unauthorized"}, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def company_info_detail(request, company_id):
+    """
+    Handle GET and PUT requests for company information.
+    GET: Retrieve company info (phone_number, logo, about_us editable).
+    PUT: Update only phone_number, logo, and about_us.
+    """
+    try:
+        company_info = get_object_or_404(CompanyInfo, company_id=company_id, customuser=request.user)
 
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(company=company)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if request.method == 'GET':
+            serializer = CompanyInfoSerializer(company_info)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def update(self, request, pk=None):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        elif request.method == 'PUT':
+            # Prepare data for update, only allowing specific fields
+            mutable_data = {
+                'phone_number': request.data.get('phone_number', company_info.phone_number),
+                'logo': request.data.get('logo', company_info.logo),
+                'about_us': request.data.get('about_us', company_info.about_us),
+            }
+            
+            serializer = CompanyInfoSerializer(company_info, data=mutable_data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def company_info(request):
+    company_id = request.data.get('company')
+    if not company_id:
+        return Response({"error": "Company ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Validate that this user really owns or is associated with that Company
+        # (Check if the ID is valid and do whatever validation you need, if any)
+        company = Company.objects.get(id=company_id)
+    except Company.DoesNotExist:
+        return Response({"error": "Invalid company ID or unauthorized"}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = CompanyInfoSerializer(data=request.data)
+    if serializer.is_valid():
+        # Save with the matched Company and the current user
+        serializer.save(company=company, customuser=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+from .serializers import ProjectInfoSerializer
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def project_list_create(request, company_id):
+    try:
+        company_info = get_object_or_404(CompanyInfo, company_id=company_id, customuser=request.user)
+
+        if request.method == 'GET':
+            projects = ProjectInfo.objects.filter(company=company_info)
+            serializer = ProjectInfoSerializer(projects, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif request.method == 'POST':
+            serializer = ProjectInfoSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(company=company_info)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_project(request, company_id, project_id):
+    """
+    Update an existing project for a specific company ID and project ID.
+    """
+    try:
+        company_info = get_object_or_404(CompanyInfo, company_id=company_id, customuser=request.user)
+        project = get_object_or_404(ProjectInfo, id=project_id, company=company_info)
+        
+        serializer = ProjectInfoSerializer(project, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=True, methods=['delete'], url_path='projects/(?P<project_id>[0-9]+)')
-    def delete_project(self, request, pk=None, project_id=None):
-        company_info = self.get_object()
-        try:
-            project = get_object_or_404(ProjectInfo, id=int(project_id), company=company_info)
-            project.delete()
-            return Response({"message": "Project deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
-        except ValueError:
-            return Response({"error": "Project ID must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_project(request, company_id, project_id):
+    print(f"Attempting to delete project {project_id} for company {company_id}")
+    try:
+        company_info = get_object_or_404(CompanyInfo, company_id=company_id, customuser=request.user)
+        project = get_object_or_404(ProjectInfo, id=project_id, company=company_info)
+        project.delete()
+        return Response({"message": "Project deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        print(f"Error deleting project: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
 
-    @action(detail=True, methods=['delete'], url_path='team/(?P<member_id>[0-9]+)')
-    def delete_team_member(self, request, pk=None, member_id=None):
-        company_info = self.get_object()
-        try:
-            member = get_object_or_404(TeamMemberInfo, id=int(member_id), company=company_info)
-            member.delete()
-            return Response({"message": "Team member deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
-        except ValueError:
-            return Response({"error": "Member ID must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+#teaminfo
+
+from .serializers import TeamMemberInfoSerializer
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def team_member_list_create(request, company_id):
+    """
+    List all team members for a company or create a new team member.
+    """
+    try:
+        company_info = get_object_or_404(CompanyInfo, company_id=company_id, customuser=request.user)
+
+        if request.method == 'GET':
+            team_members = TeamMemberInfo.objects.filter(company=company_info)
+            serializer = TeamMemberInfoSerializer(team_members, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif request.method == 'POST':
+            serializer = TeamMemberInfoSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(company=company_info)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_team_member(request, company_id, member_id):
+    """
+    Update an existing team member for a specific company ID and member ID.
+    """
+    try:
+        company_info = get_object_or_404(CompanyInfo, company_id=company_id, customuser=request.user)
+        team_member = get_object_or_404(TeamMemberInfo, id=member_id, company=company_info)
+        
+        serializer = TeamMemberInfoSerializer(team_member, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_team_member(request, company_id, member_id):
+    """
+    Delete a team member for a specific company ID and member ID.
+    """
+    try:
+        company_info = get_object_or_404(CompanyInfo, company_id=company_id, customuser=request.user)
+        team_member = get_object_or_404(TeamMemberInfo, id=member_id, company=company_info)
+        team_member.delete()
+        return Response({"message": "Team member deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

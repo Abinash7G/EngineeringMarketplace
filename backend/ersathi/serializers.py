@@ -76,9 +76,6 @@ class RentVerificationSerializer(serializers.ModelSerializer):
         
         return instance
     
-
-###companyInfofrom rest_framework import serializers
-# ersathi/serializers.py
 from rest_framework import serializers
 from .models import CompanyInfo, ProjectInfo, TeamMemberInfo
 
@@ -89,6 +86,7 @@ class ProjectInfoSerializer(serializers.ModelSerializer):
         model = ProjectInfo
         fields = ['id', 'name', 'description', 'year', 'image']
 
+
 class TeamMemberInfoSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(allow_empty_file=True, required=False)
 
@@ -96,21 +94,41 @@ class TeamMemberInfoSerializer(serializers.ModelSerializer):
         model = TeamMemberInfo
         fields = ['id', 'name', 'role', 'avatar']
 
+
 class CompanyInfoSerializer(serializers.ModelSerializer):
     projects = ProjectInfoSerializer(many=True, required=False)
     team = TeamMemberInfoSerializer(many=True, required=False)
 
     class Meta:
         model = CompanyInfo
-        fields = ['id', 'company', 'company_name', 'company_email', 'phone_number', 'address', 'logo', 'about_us', 'projects', 'team']
+        fields = [
+            'id',
+            'company',
+            'company_name',
+            'company_email',
+            'phone_number',
+            'address',
+            'logo',
+            'about_us',
+            'projects',
+            'team'
+        ]
 
     def create(self, validated_data):
         projects_data = validated_data.pop('projects', [])
         team_data = validated_data.pop('team', [])
+        print(projects_data)
+        print()
+        print(team_data)
+
+        # CompanyInfo instance
         company_info = CompanyInfo.objects.create(**validated_data)
 
+        # Create nested projects
         for project_data in projects_data:
             ProjectInfo.objects.create(company=company_info, **project_data)
+
+        # Create nested team members
         for member_data in team_data:
             TeamMemberInfo.objects.create(company=company_info, **member_data)
 
@@ -120,6 +138,7 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
         projects_data = validated_data.pop('projects', [])
         team_data = validated_data.pop('team', [])
 
+        # Update simple fields
         instance.company_name = validated_data.get('company_name', instance.company_name)
         instance.company_email = validated_data.get('company_email', instance.company_email)
         instance.phone_number = validated_data.get('phone_number', instance.phone_number)
@@ -129,12 +148,15 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
         instance.about_us = validated_data.get('about_us', instance.about_us)
         instance.save()
 
+        # Recreate projects if data is provided
         if projects_data:
             instance.projects.all().delete()
             for project_data in projects_data:
                 ProjectInfo.objects.create(company=instance, **project_data)
+
+        # Recreate team if data is provided
         if team_data:
-            instance.team.all().delete()
+            instance.team_members.all().delete()
             for member_data in team_data:
                 TeamMemberInfo.objects.create(company=instance, **member_data)
 
