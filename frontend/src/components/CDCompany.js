@@ -19,9 +19,26 @@ const CDCompany = () => {
 
   // 2) On mount, fetch your approved companies
   useEffect(() => {
-    // Example endpoint: adjust URL/port as needed
-    fetch("http://127.0.0.1:8000/company-registration-list/")
-      .then((res) => res.json())
+    // Check authentication
+    const accessToken = localStorage.getItem("access_token");
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (!accessToken || !refreshToken) {
+      window.location.href = "/login"; // Redirect to login if not authenticated
+      return;
+    }
+
+    // Fetch companies only if authenticated
+    fetch("http://127.0.0.1:8000/company-registration-list/", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`, // Include token in request
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Authentication failed or unauthorized");
+        }
+        return res.json();
+      })
       .then((data) => {
         // data should be an array of objects: [{id, company_name, location, ...}, ...]
         // Transform to match our existing shape:
@@ -34,7 +51,13 @@ const CDCompany = () => {
         }));
         setFetchedCompanies(transformed);
       })
-      .catch((err) => console.error("Error fetching approved companies:", err));
+      .catch((err) => {
+        console.error("Error fetching approved companies:", err);
+        // Redirect to login if fetch fails (e.g., due to invalid token)
+        if (err.message.includes("Authentication failed") || err.message.includes("401")) {
+          window.location.href = "/login";
+        }
+      });
   }, []);
 
   const finalCompanies = [...fetchedCompanies];
@@ -123,7 +146,7 @@ const CDCompany = () => {
                       '&:hover': { backgroundColor: "action.hover" }
                     }}
                     component={Link}         // <-- Make this button act like a Link
-                    to="/companydetails"
+                    to={`/companydetails/${company.id}`}
                   >
                     View Details
                   </Button>
