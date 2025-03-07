@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Box, Typography, IconButton, Snackbar, Alert } from "@mui/material";
 import { FilterList } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import ClientNavbar from "../components/ClientNavbar";  // Changed from ./ClientNavbar
+import ClientNavbar from "../components/ClientNavbar";  
 import Products from "../components/CDProduct";
-import CDCompany from "../components/CDCompany"; // <--- added import
+import CDCompany from "../components/CDCompany"; 
 import {
   fetchUserProfile,
   fetchCartItems,
@@ -12,7 +12,7 @@ import {
   addToCart,
   addToWishlist,
   removeFromWishlist,
-} from "../services/api";
+} from "../services/api"; // Removed refreshAccessToken since it's handled by interceptor
 import CDBanner from "../components/CDBanner";
 
 const ClientDashboard = () => {
@@ -28,7 +28,8 @@ const ClientDashboard = () => {
       try {
         // Check for authentication
         const token = localStorage.getItem("access_token");
-        if (!token) {
+        const refreshToken = localStorage.getItem("refresh_token"); // Get refresh token
+        if (!token || !refreshToken) {
           navigate("/login");
           return;
         }
@@ -41,9 +42,7 @@ const ClientDashboard = () => {
         await loadCartAndWishlist();
       } catch (error) {
         console.error("Error loading initial data:", error);
-        if (error.response?.status === 401 || error.response?.status === 403) {
-          navigate("/login");
-        }
+        // The interceptor will handle 401/403 and refresh token or redirect to login
       }
     };
 
@@ -110,7 +109,7 @@ const ClientDashboard = () => {
         cartItems={cartItems}
         onNavigateToProfile={() => navigate("/client/client-profile")}
       />
-        <CDBanner/>
+      <CDBanner/>
       <Box sx={{ padding: "20px", marginTop: "64px" }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Typography variant="h5">Construction Company</Typography>
@@ -118,17 +117,13 @@ const ClientDashboard = () => {
             <FilterList />
           </IconButton>
         </Box>
-
-        {/* REMOVED THE <Grid> THAT MAPPED OVER companies AND REPLACED WITH <CDCompany /> */}
         <CDCompany />
       </Box>
-
       <Products
         handleWishlistToggle={handleWishlistToggle}
         handleAddToCart={handleAddToCart}
         wishlistItems={wishlistItems}
       />
-
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
