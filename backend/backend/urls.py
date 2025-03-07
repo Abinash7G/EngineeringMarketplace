@@ -4,12 +4,15 @@ URL configuration for backend project.
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from ersathi import views
 from ersathi.views import (
     RentVerificationAdminView,
     RentVerificationCreateView,
     RentVerificationListView,
     RentVerificationUserUpdateView,
     Test,
+    
+
     company_info,
     company_info_detail,
     create_company_service,
@@ -17,10 +20,14 @@ from ersathi.views import (
     delete_company_service,
     delete_project,
     delete_team_member,
+    get_company_info,
+    get_company_projects,
     
     
     get_company_services,
     get_company_services_basic,
+    get_company_services_by_id,
+    get_company_team_members,
     get_user_profile,
     project_list_create,
     team_member_list_create,
@@ -92,7 +99,12 @@ urlpatterns = [
     path('company-info/<int:company_id>/team/', team_member_list_create, name='team_member_list_create'),
     path('company-info/<int:company_id>/team/<int:member_id>/', update_team_member, name='update_team_member'),
     path('company-info/<int:company_id>/team/<int:member_id>/delete/', delete_team_member, name='delete_team_member'),
-
+        #companysetailsclient side
+    path('get-company-info/<int:company_id>/', get_company_info, name='get-company-info'),
+    path('get-company-projects/<int:company_id>/', get_company_projects, name='get-company-projects'),
+    path('get-company-team-members/<int:company_id>/', get_company_team_members, name='get-company-team-members'),
+    path('api/company-services/<int:company_id>/', get_company_services_by_id, name='get_company_services_by_id'),
+    
     # Services
     path('api/company-services/get/', get_company_services, name='get_company_services'),
     path('api/company-services/create/', create_company_service, name='create_company_service'),

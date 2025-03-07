@@ -1483,3 +1483,114 @@ def delete_team_member(request, company_id, member_id):
         return Response({"message": "Team member deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+##client side view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny  # Changed to AllowAny for public access
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from .models import Company, CompanyInfo, ProjectInfo, TeamMemberInfo
+from .serializers import CompanyInfoSerializer, ProjectInfoSerializer, TeamMemberInfoSerializer
+import logging
+
+logger = logging.getLogger(__name__)
+
+# View for fetching company info
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Public access
+def get_company_info(request, company_id):
+    """
+    Retrieve company information for client viewing based on Company model's ID.
+    """
+    try:
+        logger.info(f"Fetching company info for company_id={company_id}")
+        # Step 1: Fetch the Company record
+        company = get_object_or_404(Company, id=company_id)
+        logger.info(f"Found company: {company}")
+        # Step 2: Fetch the CompanyInfo record linked to this Company
+        company_info = get_object_or_404(CompanyInfo, company=company)  # Removed customuser check
+        logger.info(f"Found company info: {company_info}")
+        serializer = CompanyInfoSerializer(company_info)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error in get_company_info: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# View for fetching projects
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Public access
+def get_company_projects(request, company_id):
+    """
+    Retrieve projects for a specific company for client viewing based on Company model's ID.
+    """
+    try:
+        logger.info(f"Fetching projects for company_id={company_id}")
+        # Step 1: Fetch the Company record
+        company = get_object_or_404(Company, id=company_id)
+        logger.info(f"Found company: {company}")
+        # Step 2: Fetch the CompanyInfo record linked to this Company
+        company_info = get_object_or_404(CompanyInfo, company=company)  # Removed customuser check
+        logger.info(f"Found company info: {company_info}")
+        # Step 3: Fetch ProjectInfo records linked to this Company
+        projects = ProjectInfo.objects.filter(company=company_info)
+        serializer = ProjectInfoSerializer(projects, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error in get_company_projects: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# View for fetching team members
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Public access
+def get_company_team_members(request, company_id):
+    """
+    Retrieve team members for a specific company for client viewing based on Company model's ID.
+    """
+    try:
+        logger.info(f"Fetching team members for company_id={company_id}")
+        # Step 1: Fetch the Company record
+        company = get_object_or_404(Company, id=company_id)
+        logger.info(f"Found company: {company}")
+        # Step 2: Fetch the CompanyInfo record linked to this Company
+        company_info = get_object_or_404(CompanyInfo, company=company)  # Removed customuser check
+        logger.info(f"Found company info: {company_info}")
+        # Step 3: Fetch TeamMemberInfo records linked to this Company
+        team_members = TeamMemberInfo.objects.filter(company=company_info)
+        serializer = TeamMemberInfoSerializer(team_members, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error in get_company_team_members: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import Company, CompanyServices
+
+@csrf_exempt
+def get_company_services_by_id(request, company_id):
+    """Returns category and sub_service for a given company_id without authentication"""
+    try:
+        # Fetch the company by company_id
+        try:
+            company = Company.objects.get(id=company_id)
+        except Company.DoesNotExist:
+            return JsonResponse({"error": "Company not found"}, status=404)
+
+        # Fetch services for the company
+        services = CompanyServices.objects.filter(company=company).select_related('service__category')
+        data = [
+            {
+                "category": service.service.category.name,
+                "sub_service": service.service.name,
+            }
+            for service in services
+        ]
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        logger.error(f"Error in get_company_services_by_id: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=400)
