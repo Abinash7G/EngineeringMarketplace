@@ -9,13 +9,19 @@ import {
   IconButton,
   Select,
   MenuItem,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import { ShoppingCart, Favorite } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 
 const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }) => {
   const [products, setProducts] = useState([]);
   const [sortOption, setSortOption] = useState("");
+  const [tabValue, setTabValue] = useState("all"); // Add tab state
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -27,7 +33,21 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
       }
     };
 
+    const fetchVerificationStatus = async () => {
+      try {
+        const response = await API.get("/api/rent-verification/user/");
+        setVerificationStatus(response.data.status);
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          setVerificationStatus("not_found");
+        } else {
+          console.error("Error fetching verification status:", error);
+        }
+      }
+    };
+
     fetchProducts();
+    fetchVerificationStatus();
   }, []);
 
   const categoryLabels = {
@@ -48,8 +68,26 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
     setProducts(sortedProducts);
   };
 
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  const filteredProducts = products.filter((product) => {
+    if (tabValue === "all") return true;
+    return product.category === tabValue;
+  });
+
   const isInWishlist = (productId) => {
     return wishlistItems.some((item) => item.id === productId);
+  };
+
+  const handleAddToCartWithVerification = (product) => {
+    if (product.category === "renting" && verificationStatus !== "verified") {
+      alert("You need to verify your profile to rent items.");
+      navigate("/upload-kyc");
+      return;
+    }
+    handleAddToCart(product);
   };
 
   return (
@@ -65,20 +103,27 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
         <Typography variant="h4" sx={{ fontWeight: "bold", color: "primary.main" }}>
           Products
         </Typography>
-        <Select
-          value={sortOption}
-          onChange={handleSortChange}
-          displayEmpty
-          sx={{ minWidth: "150px", backgroundColor: "background.paper" }}
-        >
-          <MenuItem value="">Sort by</MenuItem>
-          <MenuItem value="priceLowToHigh">Price: Low to High</MenuItem>
-          <MenuItem value="priceHighToLow">Price: High to Low</MenuItem>
-        </Select>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Tabs value={tabValue} onChange={handleTabChange}>
+            <Tab label="All" value="all" />
+            <Tab label="Rent" value="renting" />
+            <Tab label="Buy" value="selling" />
+          </Tabs>
+          <Select
+            value={sortOption}
+            onChange={handleSortChange}
+            displayEmpty
+            sx={{ minWidth: "150px", backgroundColor: "background.paper" }}
+          >
+            <MenuItem value="">Sort by</MenuItem>
+            <MenuItem value="priceLowToHigh">Price: Low to High</MenuItem>
+            <MenuItem value="priceHighToLow">Price: High to Low</MenuItem>
+          </Select>
+        </Box>
       </Box>
 
       <Grid container spacing={4}>
-        {products.map((product) => (
+        {filteredProducts.map((product) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
             <Card
               sx={{
@@ -136,7 +181,7 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                 <IconButton
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleAddToCart(product);
+                    handleAddToCartWithVerification(product);
                   }}
                   sx={{
                     backgroundColor: "white",
@@ -156,7 +201,7 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                     : "https://via.placeholder.com/200"
                 }
                 alt={product.name}
-                sx={{ objectFit:"contain", borderBottom: "1px solid grey.300" }}
+                sx={{ objectFit: "contain", borderBottom: "1px solid grey.300" }}
               />
 
               <CardContent sx={{ flexGrow: 1, padding: "16px" }}>

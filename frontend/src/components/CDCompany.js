@@ -10,7 +10,7 @@ import {
   Divider,
   Avatar
 } from "@mui/material";
-import { Star, LocationOn, ArrowForward, Phone } from "@mui/icons-material";
+import { Star, LocationOn, ArrowForward,  } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
 const CDCompany = () => {
@@ -172,22 +172,23 @@ const CDCompany = () => {
 
                 <Divider sx={{ my: 2 }} />
 
-                {/* Removed the "Previous Projects" section and its button */}
 
                 {/* Contact Button */}
                 <Box sx={{ mt: "auto", pt: 2 }}>
                   <Button
                     fullWidth
                     variant="contained"
-                    startIcon={<Phone />}
+                    // startIcon={<Phone />}
                     sx={{ 
                       borderRadius: 1,
                       py: 1,
                       textTransform: "none",
                       fontWeight: 500
                     }}
+                    component={Link}
+                    to={`/CDConsultingInquiryForm/${company.id}`}
                   >
-                    Contact Now
+                    Book Your Service Now
                   </Button>
                 </Box>
               </CardContent>

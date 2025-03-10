@@ -25,16 +25,18 @@ const Login = () => {
         const response = await API.post("/api/login/", formData);
         
         if (response.status === 200) {
-            const { access, refresh, role, company_id } = response.data;
+            const { access, refresh, role, company_id, id } = response.data;
 
             // Store access & refresh tokens
             localStorage.setItem("access_token", access);
             localStorage.setItem("refresh_token", refresh);
             localStorage.setItem("company_id", company_id);
+            localStorage.setItem("user_id", id);
             // Store access & refresh tokens in session storage
             sessionStorage.setItem("access_token", access);
             sessionStorage.setItem("refresh_token", refresh);
             sessionStorage.setItem("company_id", company_id);
+            sessionStorage.setItem("user_id", id);
             
             //  Set Axios default header for all future requests
             API.defaults.headers.common["Authorization"] = `Bearer ${access}`;

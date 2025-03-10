@@ -13,6 +13,7 @@ import {
   TextField,
   Paper,
   Modal,
+  Alert,
 } from "@mui/material";
 import { Delete, ArrowBack } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +23,7 @@ import CDCheckoutForm from "./CDCheckoutForm";
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,7 +36,21 @@ const Cart = () => {
       }
     };
 
+    const fetchVerificationStatus = async () => {
+      try {
+        const response = await API.get("/api/rent-verification/user/");
+        setVerificationStatus(response.data.status);
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          setVerificationStatus("not_found");
+        } else {
+          console.error("Error fetching verification status:", error);
+        }
+      }
+    };
+
     loadCartItems();
+    fetchVerificationStatus();
   }, []);
 
   const handleIncrement = async (id) => {
@@ -81,6 +97,11 @@ const Cart = () => {
   };
 
   const handleCheckout = () => {
+    if (rentingItems.length > 0 && verificationStatus !== "verified") {
+      alert("You need to verify your profile to rent items.");
+      navigate("/rent-verification");
+      return;
+    }
     setShowCheckoutForm(true);
   };
 
@@ -164,6 +185,15 @@ const Cart = () => {
         <Typography variant="h4" gutterBottom>
           Cart items
         </Typography>
+
+        {rentingItems.length > 0 && verificationStatus !== "verified" && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            You need to verify your profile to rent items.{" "}
+            <Button onClick={() => navigate("/rent-verification")} color="warning">
+              Verify Now
+            </Button>
+          </Alert>
+        )}
 
         {buyingItems.length > 0 && (
           <>

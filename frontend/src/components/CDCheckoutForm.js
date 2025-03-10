@@ -5,47 +5,44 @@ import {
   TextField,
   Button,
   Paper,
-  FormControl,
-  FormLabel,
   IconButton,
+  Stepper,
+  Step,
+  StepLabel,
+  Alert,
 } from "@mui/material";
 import { ArrowBack } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-// import API from "../services/api";
-import {
-  fetchUserProfile
-} from "../services/api";
+import API from "../services/api";
+import KhaltiPayments from "./KhaltiButton";
 
-import KhaltiPayments from "./KhaltiButton"; // <-- Import the separate Khalti component
 const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => {
   const navigate = useNavigate();
-// Buying info
+  const [activeStep, setActiveStep] = useState(0);
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const [verifiedDetails, setVerifiedDetails] = useState({
+    fullName: "",
+    contactNumber: "",
+    address: "",
+  });
+  const [showKhalti, setShowKhalti] = useState(false);
+
+  // Buying info
   const [buyingForm, setBuyingForm] = useState({
     contactNumber: "",
     deliveryLocation: "",
   });
 
-  const [userdata, setUserData] = useState({})
-
-  // Renting info
+  // Renting info (only renting-specific fields)
   const [rentingForm, setRentingForm] = useState({
-    name: "",
-    contactNumber: "",
-    address: "",
     surveyType: "",
-    rentingDays: 1, // Default to 0 day
+    rentingDays: 1,
     dateNeeded: "",
-    idFile: null,
   });
-// Calculated prices
+
+  // Calculated prices
   const [totalPrice, setTotalPrice] = useState(cartTotal);
   const [rentingPrice, setRentingPrice] = useState(0);
- // Logged-in user (if needed)
- 
-
- // Whether to show the Khalti button after form is validated
- const [showKhalti, setShowKhalti] = useState(false);
-
 
   useEffect(() => {
     // Calculate initial renting price for default renting days
@@ -58,26 +55,32 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => 
       setTotalPrice(cartTotal + defaultRentingPrice);
     }
 
-     const loadInitialData = async () => {
-          try {
-    
-            // Load user data
-            const userData = await fetchUserProfile();
-            setUserData(userData);
-          } catch (error) {
-            console.error("Error loading initial data:", error);
-          }
-        };
-    
-      loadInitialData();
-    
+    const fetchVerificationData = async () => {
+      try {
+        const response = await API.get("/api/rent-verification/user/");
+        setVerificationStatus(response.data.status);
+        // Pre-fill verified details
+        setVerifiedDetails({
+          fullName: response.data.full_name || "",
+          contactNumber: response.data.phone || "",
+          address: response.data.address || "",
+        });
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          setVerificationStatus("not_found");
+        } else {
+          console.error("Error fetching verification status:", error);
+        }
+      }
+    };
+
+    fetchVerificationData();
   }, [cartTotal, rentingItems, rentingForm.rentingDays]);
 
   const handleRentingDaysChange = (e) => {
-    const days = parseInt(e.target.value, 10) || 0;
+    const days = parseInt(e.target.value, 10) || 1; // Default to 1 if invalid
     setRentingForm({ ...rentingForm, rentingDays: days });
 
-    // Recalculate renting price based on days
     const newRentingPrice = rentingItems.reduce(
       (total, item) => total + item.price * days,
       0
@@ -86,73 +89,229 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => 
     setTotalPrice(cartTotal + newRentingPrice);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setShowKhalti(false); // reset
-  
-    if (buyingItems.length > 0 && (!buyingForm.contactNumber || !buyingForm.deliveryLocation)) {
-      alert("Please fill all buying details");
-      return;
-    }
-  
-    if (
-      rentingItems.length > 0 &&
-      (!rentingForm.name ||
-        !rentingForm.contactNumber ||
-        !rentingForm.address ||
-        !rentingForm.surveyType ||
-        !rentingForm.rentingDays ||
-        !rentingForm.dateNeeded ||
-        !rentingForm.idFile)
-    ) {
-      alert("Please fill all renting details");
-      return;
-    }
-  
-    // Commenting out backend call for now
-    /*
-    try {
-      const payload = {
-        customerName: rentingForm.name,
-        contactNumber: rentingForm.contactNumber,
-        deliveryLocation: rentingForm.address || buyingForm.deliveryLocation,
-        totalAmount: totalPrice,
-      };
-  
-      console.log("Payload:", payload); // Debugging log
-  
-      // Send data to backend to create PaymentIntent
-      const response = await API.post('/api/payment-intent/', {
-        totalAmount: totalPrice, // Grand total from the form
-      });
-  
-      const clientSecret = response.data.clientSecret;
-  
-    } catch (error) {
-      console.error("Error creating PaymentIntent:", error);
-      alert("Unable to process payment. Please try again.");
-    }
-    */
-  
-    // Navigate directly to Esewa payment page
-        
-    // navigate("/khalti",{
-    //   state: { 
-    //     amount: totalPrice*100,
-    //     name: userdata.username,
-    //     email: userdata.email,
-    //     phone: "987652356265",
-    //     buyingForm,
-    //     rentingForm,
-    //     buyingItems,
-    //     rentingItems
-    // }
+  const steps = rentingItems.length > 0 ? ["Verification Check", "Details", "Payment"] : ["Details", "Payment"];
 
-    // });
-    setShowKhalti(true);
+  const handleNext = () => {
+    console.log("Renting Form State:", rentingForm); // Debugging log
+    if (activeStep === 0 && rentingItems.length > 0) {
+      if (verificationStatus !== "verified") {
+        alert("You need to verify your profile to rent items.");
+        navigate("/rent-verification");
+        return;
+      }
+    }
+    if (activeStep === steps.length - 2) {
+      // Validate form before proceeding to payment
+      if (buyingItems.length > 0 && (!buyingForm.contactNumber || !buyingForm.deliveryLocation)) {
+        alert("Please fill all buying details");
+        return;
+      }
+      if (
+        rentingItems.length > 0 &&
+        (!rentingForm.surveyType.trim() || // Check for non-empty string
+          rentingForm.rentingDays <= 0 || // Ensure renting days is positive
+          !rentingForm.dateNeeded) // Check for non-empty date
+      ) {
+        alert("Please fill all renting details");
+        return;
+      }
+    }
+    setActiveStep((prev) => prev + 1);
   };
-  
-  
+
+  const handleBack = () => {
+    setActiveStep((prev) => prev - 1);
+  };
+
+  const handlePaymentSuccess = async () => {
+    // Create order after successful payment
+    try {
+      if (buyingItems.length > 0) {
+        await API.post("/api/orders/create/", {
+          order_type: "buying",
+          items: buyingItems.map((item) => ({
+            product_id: item.product_id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          total_amount: cartTotal,
+          company_id: buyingItems[0].company_id || 1,
+          user_id: localStorage.getItem("user_id"),
+        });
+      }
+      if (rentingItems.length > 0) {
+        await API.post("/api/orders/create/", {
+          order_type: "renting",
+          items: rentingItems.map((item) => ({
+            product_id: item.product_id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          total_amount: rentingPrice,
+          company_id: rentingItems[0].company_id || 1,
+          user_id: localStorage.getItem("user_id"),
+          renting_details: {
+            name: verifiedDetails.fullName,
+            contactNumber: verifiedDetails.contactNumber,
+            address: verifiedDetails.address,
+            surveyType: rentingForm.surveyType,
+            rentingDays: rentingForm.rentingDays,
+            dateNeeded: rentingForm.dateNeeded,
+          },
+        });
+      }
+      alert("Order placed successfully!");
+      navigate("/orders");
+    } catch (error) {
+      console.error("Error creating order:", error);
+      alert("Failed to create order. Please try again.");
+    }
+  };
+
+  const renderStepContent = (step) => {
+    if (rentingItems.length > 0 && step === 0) {
+      return (
+        <Box>
+          <Typography variant="h6">Verification Check</Typography>
+          {verificationStatus === "verified" ? (
+            <Alert severity="success">Your profile is verified!</Alert>
+          ) : (
+            <Alert severity="warning">
+              You need to verify your profile to rent items.{" "}
+              <Button onClick={() => navigate("/rent-verification")} color="warning">
+                Verify Now
+              </Button>
+            </Alert>
+          )}
+        </Box>
+      );
+    }
+    if ((rentingItems.length > 0 && step === 1) || (buyingItems.length > 0 && step === 0)) {
+      return (
+        <Box>
+          {buyingItems.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Buying Details
+              </Typography>
+              <TextField
+                label="Contact Number"
+                name="contactNumber"
+                value={buyingForm.contactNumber}
+                onChange={(e) =>
+                  setBuyingForm({ ...buyingForm, [e.target.name]: e.target.value })
+                }
+                margin="dense"
+                required
+                size="small"
+                sx={{ width: "100%" }}
+              />
+              <TextField
+                label="Delivery Location"
+                name="deliveryLocation"
+                value={buyingForm.deliveryLocation}
+                onChange={(e) =>
+                  setBuyingForm({ ...buyingForm, [e.target.name]: e.target.value })
+                }
+                margin="dense"
+                required
+                size="small"
+                sx={{ width: "100%" }}
+              />
+            </Box>
+          )}
+
+          {rentingItems.length > 0 && (
+            <Box>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Renting Details
+              </Typography>
+              <TextField
+                label="Name"
+                value={verifiedDetails.fullName}
+                margin="dense"
+                size="small"
+                sx={{ width: "100%" }}
+                disabled
+              />
+              <TextField
+                label="Contact Number"
+                value={verifiedDetails.contactNumber}
+                margin="dense"
+                size="small"
+                sx={{ width: "100%" }}
+                disabled
+              />
+              <TextField
+                label="Address"
+                value={verifiedDetails.address}
+                margin="dense"
+                size="small"
+                sx={{ width: "100%" }}
+                disabled
+              />
+              <TextField
+                label="Survey Type / Purpose"
+                name="surveyType"
+                value={rentingForm.surveyType}
+                onChange={(e) =>
+                  setRentingForm({ ...rentingForm, [e.target.name]: e.target.value })
+                }
+                margin="dense"
+                required
+                size="small"
+                sx={{ width: "100%" }}
+              />
+              <TextField
+                label="Renting Days"
+                name="rentingDays"
+                type="number"
+                value={rentingForm.rentingDays}
+                onChange={handleRentingDaysChange}
+                margin="dense"
+                required
+                size="small"
+                sx={{ width: "100%" }}
+                inputProps={{ min: 1 }}
+              />
+              <TextField
+                label="Date Needed"
+                name="dateNeeded"
+                type="date"
+                value={rentingForm.dateNeeded}
+                onChange={(e) =>
+                  setRentingForm({ ...rentingForm, [e.target.name]: e.target.value })
+                }
+                margin="dense"
+                required
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                sx={{ width: "100%" }}
+              />
+            </Box>
+          )}
+        </Box>
+      );
+    }
+    if (step === steps.length - 1) {
+      return (
+        <Box>
+          <Typography variant="h6">Payment</Typography>
+          <Typography variant="h6" sx={{ mt: 2, p: 2, bgcolor: "#f5f5f5", borderRadius: "4px" }}>
+            Total Renting Price: Rs. {rentingPrice}
+          </Typography>
+          <Typography variant="h6" sx={{ mt: 1, p: 2, bgcolor: "#f5f5f5", borderRadius: "4px" }}>
+            Grand Total Price: Rs. {totalPrice}
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <KhaltiPayments totalPrice={totalPrice} onSuccess={handlePaymentSuccess} />
+          </Box>
+        </Box>
+      );
+    }
+  };
 
   return (
     <Box
@@ -167,7 +326,6 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => 
         paddingTop: "10px",
       }}
     >
-      {/* Back Button */}
       <Box sx={{ display: "flex", alignItems: "center", marginBottom: "10px", width: "100%" }}>
         <IconButton onClick={() => navigate(-1)}>
           <ArrowBack />
@@ -180,7 +338,6 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => 
         </Typography>
       </Box>
 
-      {/* Form Container */}
       <Paper
         sx={{
           padding: "16px",
@@ -191,163 +348,29 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal, onProceed }) => 
           textAlign: "center",
         }}
       >
-        {/* Buying Details */}
-        {buyingItems.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Buying Details
-            </Typography>
-            <TextField
-              label="Contact Number"
-              name="contactNumber"
-              value={buyingForm.contactNumber}
-              onChange={(e) =>
-                setBuyingForm({ ...buyingForm, [e.target.name]: e.target.value })
-              }
-              margin="dense"
-              required
-              size="small"
-              sx={{ width: "100%" }}
-            />
-            <TextField
-              label="Delivery Location"
-              name="deliveryLocation"
-              value={buyingForm.deliveryLocation}
-              onChange={(e) =>
-                setBuyingForm({ ...buyingForm, [e.target.name]: e.target.value })
-              }
-              margin="dense"
-              required
-              size="small"
-              sx={{ width: "100%" }}
-            />
-          </Box>
-        )}
+        <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
 
-        {/* Renting Details */}
-        {rentingItems.length > 0 && (
-          <Box>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Renting Details
-            </Typography>
-            <TextField
-              label="Name"
-              name="name"
-              value={rentingForm.name}
-              onChange={(e) =>
-                setRentingForm({ ...rentingForm, [e.target.name]: e.target.value })
-              }
-              margin="dense"
-              required
-              size="small"
-              sx={{ width: "100%" }}
-            />
-            <TextField
-              label="Contact Number"
-              name="contactNumber"
-              value={rentingForm.contactNumber}
-              onChange={(e) =>
-                setRentingForm({ ...rentingForm, [e.target.name]: e.target.value })
-              }
-              margin="dense"
-              required
-              size="small"
-              sx={{ width: "100%" }}
-            />
-            <TextField
-              label="Address"
-              name="address"
-              value={rentingForm.address}
-              onChange={(e) =>
-                setRentingForm({ ...rentingForm, [e.target.name]: e.target.value })
-              }
-              margin="dense"
-              required
-              size="small"
-              sx={{ width: "100%" }}
-            />
-            <TextField
-              label="Survey Type / Purpose"
-              name="surveyType"
-              value={rentingForm.surveyType}
-              onChange={(e) =>
-                setRentingForm({ ...rentingForm, [e.target.name]: e.target.value })
-              }
-              margin="dense"
-              required
-              size="small"
-              sx={{ width: "100%" }}
-            />
-            <TextField
-              label="Renting Days"
-              name="rentingDays"
-              type="number"
-              value={rentingForm.rentingDays}
-              onChange={handleRentingDaysChange}
-              margin="dense"
-              required
-              size="small"
-              sx={{ width: "100%" }}
-            />
-            <TextField
-              label="Date Needed"
-              name="dateNeeded"
-              type="date"
-              value={rentingForm.dateNeeded}
-              onChange={(e) =>
-                setRentingForm({ ...rentingForm, [e.target.name]: e.target.value })
-              }
-              margin="dense"
-              required
-              size="small"
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: "100%" }}
-            />
-            <FormControl margin="dense" sx={{ width: "100%", textAlign: "left" }}>
-              <FormLabel>Upload National ID / Driving License</FormLabel>
-              <input
-                type="file"
-                onChange={(e) =>
-                  setRentingForm({ ...rentingForm, idFile: e.target.files[0] })
-                }
-                required
-                style={{ marginTop: "8px" }}
-              />
-            </FormControl>
-          </Box>
-        )}
+        {renderStepContent(activeStep)}
 
-        {/* Pricing Section */}
-        <Typography
-          variant="h6"
-          sx={{ mt: 2, p: 2, bgcolor: "#f5f5f5", borderRadius: "4px" }}
-        >
-          Total Renting Price: Rs. {rentingPrice}
-        </Typography>
-        <Typography
-          variant="h6"
-          sx={{ mt: 1, p: 2, bgcolor: "#f5f5f5", borderRadius: "4px" }}
-        >
-          Grand Total Price: Rs. {totalPrice}
-        </Typography>
-
-        {/* Proceed to Payment Button */}
-        {!showKhalti ? (
+        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
+          <Button disabled={activeStep === 0} onClick={handleBack} sx={{ mr: 1 }}>
+            Back
+          </Button>
           <Button
             variant="contained"
             color="primary"
-            onClick={handleSubmit}
-            fullWidth
-            sx={{ mt: 2 }}
+            onClick={handleNext}
+            disabled={activeStep === steps.length - 1}
           >
-            Pay with Khalti
+            {activeStep === steps.length - 2 ? "Proceed to Payment" : "Next"}
           </Button>
-        ) : (
-          // Once validated, show the KhaltiPayments component
-          <Box sx={{ mt: 2 }}>
-            <KhaltiPayments totalPrice={totalPrice} />
-          </Box>
-        )}
+        </Box>
       </Paper>
     </Box>
   );
