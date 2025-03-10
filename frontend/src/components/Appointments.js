@@ -26,20 +26,17 @@ const Appointments = () => {
     {
       id: 1,
       clientName: "John Doe",
-      serviceName: "Residential Construction",
+      serviceName: "Structural Engineering",
       date: "Feb 15, 2025",
       time: "10:00 AM",
       status: "Pending",
-      notes: "Discuss project scope and site inspection.",
-    },
-    {
-      id: 2,
-      clientName: "Jane Smith",
-      serviceName: "Geotechnical Analysis",
-      date: "Feb 16, 2025",
-      time: "2:00 PM",
-      status: "Confirmed",
-      notes: "Bring soil test reports.",
+      location: "Kathmandu, Nepal",
+      email: "john.doe@example.com",
+      phone: "123-456-7890",
+      category: "Engineering Consulting",
+      subService: "Structural Engineering",
+      floorRequirements: "3 floors with a basement",
+      floorDetails: "Each floor should have 4 bedrooms and 2 bathrooms.",
     },
   ]);
 
@@ -185,13 +182,61 @@ const Appointments = () => {
             onChange={handleChange}
           />
           <TextField
-            label="Notes"
-            name="notes"
+            label="Location"
+            name="location"
+            fullWidth
+            margin="normal"
+            value={currentAppointment?.location || ""}
+            onChange={handleChange}
+          />
+          <TextField
+            label="Email"
+            name="email"
+            fullWidth
+            margin="normal"
+            value={currentAppointment?.email || ""}
+            onChange={handleChange}
+          />
+          <TextField
+            label="Phone"
+            name="phone"
+            fullWidth
+            margin="normal"
+            value={currentAppointment?.phone || ""}
+            onChange={handleChange}
+          />
+          <TextField
+            label="Category"
+            name="category"
+            fullWidth
+            margin="normal"
+            value={currentAppointment?.category || ""}
+            onChange={handleChange}
+          />
+          <TextField
+            label="Sub-Service"
+            name="subService"
+            fullWidth
+            margin="normal"
+            value={currentAppointment?.subService || ""}
+            onChange={handleChange}
+          />
+          <TextField
+            label="Floor Requirements"
+            name="floorRequirements"
+            fullWidth
+            margin="normal"
+            value={currentAppointment?.floorRequirements || ""}
+            onChange={handleChange}
+          />
+          <TextField
+            label="Floor Details"
+            name="floorDetails"
             fullWidth
             margin="normal"
             multiline
             rows={3}
-            value={currentAppointment?.notes || ""}
+            value={currentAppointment?.floorDetails || ""}
             onChange={handleChange}
           />
           <Select

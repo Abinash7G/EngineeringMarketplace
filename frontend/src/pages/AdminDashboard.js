@@ -4,7 +4,7 @@ import { FaUsers, FaTools, FaChartBar, FaBuilding } from "react-icons/fa";
 import Sidebar from "../components/Sidebar";
 import Chart from "../components/Chart";
 import { useNavigate } from "react-router-dom";
-import ViewCompanyDetails from "../components/ViewCompanyDetails";
+
 
 import {
   Box,
@@ -42,7 +42,7 @@ const AdminDashboard = () => {
 
         // Filter out unapproved companies.
         const unapprovedCompanies = allCompanies.filter(
-          (company) => !company.is_approved
+          (company) => !company.is_approved && !company.is_rejected
         );
 
         // Filter approved companies that include Safety Training module (assumed id = 5).
@@ -289,6 +289,7 @@ const AdminDashboard = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
     </Box>
   );
 };

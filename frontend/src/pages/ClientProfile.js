@@ -107,7 +107,7 @@ const ClientProfile = () => {
 
       {/* Title with user's first and last name */}
       <Typography variant="h4" gutterBottom>
-        Profile, {`${profile.firstName} ${profile.lastName}`}
+      Hello, {`${profile.firstName} ${profile.lastName}`}
       </Typography>
 
       {/* Basic Information Section */}

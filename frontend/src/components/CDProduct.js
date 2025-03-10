@@ -9,13 +9,19 @@ import {
   IconButton,
   Select,
   MenuItem,
-} from "@mui/material"; // Removed unused imports
+  Tabs,
+  Tab,
+} from "@mui/material";
 import { ShoppingCart, Favorite } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 
 const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }) => {
   const [products, setProducts] = useState([]);
   const [sortOption, setSortOption] = useState("");
+  const [tabValue, setTabValue] = useState("all"); // Add tab state
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -27,8 +33,27 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
       }
     };
 
+    const fetchVerificationStatus = async () => {
+      try {
+        const response = await API.get("/api/rent-verification/user/");
+        setVerificationStatus(response.data.status);
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          setVerificationStatus("not_found");
+        } else {
+          console.error("Error fetching verification status:", error);
+        }
+      }
+    };
+
     fetchProducts();
+    fetchVerificationStatus();
   }, []);
+
+  const categoryLabels = {
+    renting: "Rent",
+    selling: "Buy",
+  };
 
   const handleSortChange = (event) => {
     const option = event.target.value;
@@ -43,35 +68,62 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
     setProducts(sortedProducts);
   };
 
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  const filteredProducts = products.filter((product) => {
+    if (tabValue === "all") return true;
+    return product.category === tabValue;
+  });
+
   const isInWishlist = (productId) => {
     return wishlistItems.some((item) => item.id === productId);
   };
 
+  const handleAddToCartWithVerification = (product) => {
+    if (product.category === "renting" && verificationStatus !== "verified") {
+      alert("You need to verify your profile to rent items.");
+      navigate("/upload-kyc");
+      return;
+    }
+    handleAddToCart(product);
+  };
+
   return (
-    <Box sx={{ padding: "20px" }}>
+    <Box sx={{ padding: "40px" }}>
       <Box
         sx={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "20px",
+          marginBottom: "30px",
         }}
       >
-        <Typography variant="h5">Products</Typography>
-        <Select
-          value={sortOption}
-          onChange={handleSortChange}
-          displayEmpty
-          sx={{ minWidth: "150px" }}
-        >
-          <MenuItem value="">Sort by</MenuItem>
-          <MenuItem value="priceLowToHigh">Price: Low to High</MenuItem>
-          <MenuItem value="priceHighToLow">Price: High to Low</MenuItem>
-        </Select>
+        <Typography variant="h4" sx={{ fontWeight: "bold", color: "primary.main" }}>
+          Products
+        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Tabs value={tabValue} onChange={handleTabChange}>
+            <Tab label="All" value="all" />
+            <Tab label="Rent" value="renting" />
+            <Tab label="Buy" value="selling" />
+          </Tabs>
+          <Select
+            value={sortOption}
+            onChange={handleSortChange}
+            displayEmpty
+            sx={{ minWidth: "150px", backgroundColor: "background.paper" }}
+          >
+            <MenuItem value="">Sort by</MenuItem>
+            <MenuItem value="priceLowToHigh">Price: Low to High</MenuItem>
+            <MenuItem value="priceHighToLow">Price: High to Low</MenuItem>
+          </Select>
+        </Box>
       </Box>
 
-      <Grid container spacing={2}>
-        {products.map((product) => (
+      <Grid container spacing={4}>
+        {filteredProducts.map((product) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
             <Card
               sx={{
@@ -79,22 +131,29 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                 display: "flex",
                 flexDirection: "column",
                 position: "relative",
+                borderRadius: "12px",
+                boxShadow: 3,
+                transition: "transform 0.3s, box-shadow 0.3s",
+                "&:hover": {
+                  transform: "scale(1.05)",
+                  boxShadow: 6,
+                },
               }}
             >
-              {/* Rent/Sell Label */}
               <Box
                 sx={{
                   position: "absolute",
                   top: 0,
                   left: 0,
-                  backgroundColor: product.category === "renting" ? "red" : "blue",
+                  backgroundColor: product.category === "renting" ? "error.main" : "primary.main",
                   color: "white",
-                  padding: "4px 8px",
-                  fontSize: "12px",
+                  padding: "6px 12px",
+                  fontSize: "14px",
                   fontWeight: "bold",
+                  borderRadius: "0 0 12px 0",
                 }}
               >
-                {product.category === "renting" ? "Rent" : "Sell"}
+                {categoryLabels[product.category] || "Unknown"}
               </Box>
 
               <Box
@@ -114,7 +173,7 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                   }}
                   sx={{
                     backgroundColor: "white",
-                    "&:hover": { backgroundColor: "white" },
+                    "&:hover": { backgroundColor: "grey.100" },
                   }}
                 >
                   <Favorite color={isInWishlist(product.id) ? "error" : "action"} />
@@ -122,11 +181,11 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                 <IconButton
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleAddToCart(product);
+                    handleAddToCartWithVerification(product);
                   }}
                   sx={{
                     backgroundColor: "white",
-                    "&:hover": { backgroundColor: "white" },
+                    "&:hover": { backgroundColor: "grey.100" },
                   }}
                 >
                   <ShoppingCart color="primary" />
@@ -142,25 +201,25 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                     : "https://via.placeholder.com/200"
                 }
                 alt={product.name}
-                sx={{ objectFit: "contain" }}
+                sx={{ objectFit: "contain", borderBottom: "1px solid grey.300" }}
               />
 
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography variant="h6" component="div" colour="primary" sx={{ fontWeight: "bold" }}>
+              <CardContent sx={{ flexGrow: 1, padding: "16px" }}>
+                <Typography variant="h6" component="div" sx={{ fontWeight: "bold", mb: 1 }}>
                   {product.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   {product.description}
                 </Typography>
-                <Typography variant="h6" color="primary" sx={{ mt: 2 }}>
+                <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
                   Rs. {product.price}
                 </Typography>
                 {product.category === "renting" && (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Per Day Rent: Rs. {product.per_day_rent}
                   </Typography>
                 )}
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                <Typography variant="body2" color="text.secondary">
                   Company: {product.company_name || "N/A"}
                 </Typography>
               </CardContent>

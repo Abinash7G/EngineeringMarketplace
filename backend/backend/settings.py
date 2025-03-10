@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-4i-15hbcb5xxyrb#hgvx(^1qr$=sw5ix@^__ue(%+@yg9@28xe
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'social_django',
     'django_rest_passwordreset',
-    'payments',
+    
 
 ]
 
@@ -141,7 +141,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',

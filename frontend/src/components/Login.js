@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 import API from "../services/api"; // Axios instance
-import { FaGoogle } from "react-icons/fa"; // Google icon
+//import { FaGoogle } from "react-icons/fa"; // Google icon
 import { TextField, Button, Typography, Box, Container } from "@mui/material";
 
 const Login = () => {
@@ -23,16 +23,32 @@ const Login = () => {
 
     try {
         const response = await API.post("/api/login/", formData);
+        
         if (response.status === 200) {
-            const { access, role,company_id } = response.data;
+            const { access, refresh, role, company_id, id } = response.data;
+
+            // Store access & refresh tokens
             localStorage.setItem("access_token", access);
+            localStorage.setItem("refresh_token", refresh);
             localStorage.setItem("company_id", company_id);
+            localStorage.setItem("user_id", id);
+            // Store access & refresh tokens in session storage
+            sessionStorage.setItem("access_token", access);
+            sessionStorage.setItem("refresh_token", refresh);
+            sessionStorage.setItem("company_id", company_id);
+            sessionStorage.setItem("user_id", id);
             
+            //  Set Axios default header for all future requests
+            API.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
             // Redirect based on role
-            if (role === "Platformadmin") navigate("/admin"); //!* Redirect to admin dashboard *!
-            else if (role === "Admin") navigate("/company"); //company dashboard
-            else navigate("/client");
+            if (role === "Platformadmin") {
+                navigate("/admin"); // Redirect to platform admin dashboard
+            } else if (role === "Admin") {
+                navigate("/company"); // Redirect to company dashboard
+            } else {
+                navigate("/client"); // Redirect to client page
+            }
         }
     } catch (error) {
         if (error.response) {
@@ -42,9 +58,10 @@ const Login = () => {
         }
     }
 };
-  const handleGoogleLogin = () => {
-    window.location.href = "http://127.0.0.1:8000/auth/login/google-oauth2/";
-  };
+
+  // const handleGoogleLogin = () => {
+  //   window.location.href = "http://127.0.0.1:8000/auth/login/google-oauth2/";
+  // };
 
   const handleForgotPassword = async () => {
     try {
@@ -140,7 +157,7 @@ const Login = () => {
         </Typography>
       )}
 
-      {!showForgotPassword && (
+      {/* {!showForgotPassword && (
         <Button
           variant="contained"
           startIcon={<FaGoogle />}
@@ -155,7 +172,7 @@ const Login = () => {
         >
           Login with Google
         </Button>
-      )}
+      )} */}
 
       <Typography variant="body2" align="center" sx={{ mt: 2 }}>
         Don’t have an account?{" "}

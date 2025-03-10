@@ -1,76 +1,160 @@
 """
 URL configuration for backend project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-from ersathi.views import CreateProduct, ServiceList, Test, get_user_profile
-from ersathi.views import SignupView, LoginView
 from django.urls import path, include
-from ersathi.views import ForgotPasswordView
-from ersathi.views import CompanyRegistrationView, get_company_registrations, approve_company, reject_company,get_company_details
-from ersathi.views import ServiceList
-from ersathi.views import ConfirmEmailView , ResetPasswordView
-from ersathi.views import change_password
-from ersathi.views import get_all_products, get_products_by_category, get_company_products
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from ersathi import views
+from ersathi.views import (
+    CompanyInquiriesView,
+    RentVerificationAdminView,
+    RentVerificationCreateView,
+    RentVerificationListView,
+    RentVerificationUserUpdateView,
+    SubmitInquiryView,
+    Test,
+    
+
+    company_info,
+    company_info_detail,
+    create_company_service,
+    
+    delete_company_service,
+    delete_project,
+    delete_team_member,
+    get_company_info,
+    get_company_projects,
+    
+    
+    get_company_services,
+    get_company_services_basic,
+    get_company_services_by_id,
+    get_company_team_members,
+    get_user_profile,
+    project_list_create,
+    team_member_list_create,
+    
+    update_company_service,
+    update_project,
+    update_team_member,
+    user_verification_status,
+    verify_khalti_payment,
+    SignupView,
+    LoginView,
+    ForgotPasswordView,
+    CompanyRegistrationView,
+    get_company_registrations,
+    approve_company,
+    reject_company,
+    get_company_details,
+    get_services,
+    ConfirmEmailView,
+    ResetPasswordView,
+    change_password,
+    get_all_products,
+    get_products_by_category,
+    get_company_products,
+    get_cart,
+    add_to_cart,
+    remove_from_cart,
+    get_wishlist,
+    add_to_wishlist,
+    remove_from_wishlist,
+  
+   
+   
+)
+
+
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path
-from ersathi.views import get_cart, add_to_cart, remove_from_cart, get_wishlist, add_to_wishlist, remove_from_wishlist
-from payments.views import PaymentAPI, create_payment_intent
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/services/', ServiceList.as_view(), name='service-list'),
+    path('api/services/', get_services, name='get_services'),
+
+
+    # Auth
     path('api/signup/', SignupView.as_view(), name='signup'),
     path('api/login/', LoginView.as_view(), name='login'),
     path('auth/', include('social_django.urls', namespace='social')),
     path('api/forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
     path('password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
     path('api/password_reset/<str:token>/', ResetPasswordView.as_view()),
-    #company
+
+    # Company
     path('company-registration/', CompanyRegistrationView.as_view(), name='company-registration'),
     path('company-registration-list/', get_company_registrations, name='company-registration-list'),
     path('approve-company/<int:pk>/', approve_company, name='approve-company'),
     path('reject-company/<int:pk>/', reject_company, name='reject-company'),
     path('api/confirm-email/<str:token>/', ConfirmEmailView.as_view(), name='confirm-email'),
-    path('company-registration/<int:pk>/', get_company_details, name='company-details'), 
-    ## 
+    path('company-registration/<int:pk>/', get_company_details, name='company-details'),
+
+    #company info
+    path('company-info/', company_info, name='company-info-list'), #post
+    path('company-info/<int:company_id>/', company_info_detail, name='company-info-detail'),  # Handles GET and PUT
+    #Company/project]
+    path('company-info/<int:company_id>/projects/', project_list_create, name='project-list-create'),
+    path('company-info/<int:company_id>/projects/<int:project_id>/', update_project, name='update-project'),  # PUT update project
+    path('company-info/<int:company_id>/projects/<int:project_id>/delete/', delete_project, name='delete-project'),  # DELETE project
+    #TEAMmember
+    path('company-info/<int:company_id>/team/', team_member_list_create, name='team_member_list_create'),
+    path('company-info/<int:company_id>/team/<int:member_id>/', update_team_member, name='update_team_member'),
+    path('company-info/<int:company_id>/team/<int:member_id>/delete/', delete_team_member, name='delete_team_member'),
+        #companysetailsclient side
+    path('get-company-info/<int:company_id>/', get_company_info, name='get-company-info'),
+    path('get-company-projects/<int:company_id>/', get_company_projects, name='get-company-projects'),
+    path('get-company-team-members/<int:company_id>/', get_company_team_members, name='get-company-team-members'),
+    path('api/company-services/<int:company_id>/', get_company_services_by_id, name='get_company_services_by_id'),
+#
+    path('api/submit-inquiry/<int:company_id>/', views.SubmitInquiryView.as_view(), name='submit-inquiry'),
+    path('api/company-inquiries/', views.CompanyInquiriesView.as_view(), name='company-inquiries'),
+    path('api/update-inquiry-status/<int:inquiry_id>/', views.UpdateInquiryStatusView.as_view(), name='update-inquiry-status'),
+    path('company-appointments/', views.CompanyAppointmentsView.as_view(), name='company-appointments'),
+   # path('api/submit-inquiry/<int:company_id>/', SubmitInquiryView.as_view(), name='submit-inquiry'),
+   # path('api/company-inquiries/', CompanyInquiriesView.as_view(), name='company-inquiries'),
+    # Services
+    path('api/company-services/get/', get_company_services, name='get_company_services'),
+    path('api/company-services/create/', create_company_service, name='create_company_service'),
+    path('api/company-services/<int:service_id>/update/', update_company_service, name='update_company_service'),
+    path('api/company-services/<int:service_id>/delete/', delete_company_service, name='delete_company_service'),
+    path('api/company-services/basic/', get_company_services_basic, name='get_company_services_basic'),
+
+    # User
     path('api/user-profile/', get_user_profile, name='user-profile'),
     path('api/change-password/', change_password, name='change_password'),
+
+    # Products
     path('api/products/', get_all_products, name='get_all_products'),
     path('api/products/<str:category>/', get_products_by_category, name='get_products_by_category'),
     path('api/company-products/', get_company_products, name='get_company_products'),
-    ##
-    path('api/products/create/', CreateProduct.as_view(), name='create_product'),
-    #path('api/products/<int:pk>/', create_product, name='update_product'), 
+
+    # Test
     path('api/test/', Test.as_view(), name='create_Test'),
-    #Cart
+    path('api/test/<int:pk>/', Test.as_view(), name='update_delete_test'),
+
+    # Cart
     path('api/cart/', get_cart, name='get_cart'),
     path('api/cart/add/', add_to_cart, name='add_to_cart'),
     path('api/cart/remove/<int:product_id>/', remove_from_cart, name='remove_from_cart'),
     path('api/wishlist/', get_wishlist, name='get_wishlist'),
     path('api/wishlist/add/', add_to_wishlist, name='add_to_wishlist'),
     path('api/wishlist/remove/<int:product_id>/', remove_from_wishlist, name='remove_from_wishlist'),
-    #payment
-    path('make_payment/', PaymentAPI.as_view(), name='make_payment'),
-     path('api/payment-intent/', create_payment_intent),
 
-    
-]   
+    # Payment
+    path('api/verify-khalti-payment/', verify_khalti_payment, name='verify_khalti_payment'),
 
+    # Rent Verification
+    path('api/rent-verification/', RentVerificationCreateView.as_view(), name='rent-verification-create'),
+    path('api/rent-verification/<int:pk>/', RentVerificationAdminView.as_view(), name='rent-verification-admin'),
+    path('api/rent-verification/list/', RentVerificationListView.as_view(), name='rent-verification-list'),
+    path('api/rent-verification/user/', user_verification_status, name='rent-verification-user'),
+    path('api/rent-verification/user-update/<int:pk>/', RentVerificationUserUpdateView.as_view(), name='rent-verification-user-update'),
+
+    # JWT Token
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+]
 
 # Serve media files during development
 if settings.DEBUG:
