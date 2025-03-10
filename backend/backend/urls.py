@@ -6,10 +6,12 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from ersathi import views
 from ersathi.views import (
+    CompanyInquiriesView,
     RentVerificationAdminView,
     RentVerificationCreateView,
     RentVerificationListView,
     RentVerificationUserUpdateView,
+    SubmitInquiryView,
     Test,
     
 
@@ -104,7 +106,13 @@ urlpatterns = [
     path('get-company-projects/<int:company_id>/', get_company_projects, name='get-company-projects'),
     path('get-company-team-members/<int:company_id>/', get_company_team_members, name='get-company-team-members'),
     path('api/company-services/<int:company_id>/', get_company_services_by_id, name='get_company_services_by_id'),
-    
+#
+    path('api/submit-inquiry/<int:company_id>/', views.SubmitInquiryView.as_view(), name='submit-inquiry'),
+    path('api/company-inquiries/', views.CompanyInquiriesView.as_view(), name='company-inquiries'),
+    path('api/update-inquiry-status/<int:inquiry_id>/', views.UpdateInquiryStatusView.as_view(), name='update-inquiry-status'),
+    path('company-appointments/', views.CompanyAppointmentsView.as_view(), name='company-appointments'),
+   # path('api/submit-inquiry/<int:company_id>/', SubmitInquiryView.as_view(), name='submit-inquiry'),
+   # path('api/company-inquiries/', CompanyInquiriesView.as_view(), name='company-inquiries'),
     # Services
     path('api/company-services/get/', get_company_services, name='get_company_services'),
     path('api/company-services/create/', create_company_service, name='create_company_service'),

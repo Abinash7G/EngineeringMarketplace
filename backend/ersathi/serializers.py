@@ -117,9 +117,7 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         projects_data = validated_data.pop('projects', [])
         team_data = validated_data.pop('team', [])
-        print(projects_data)
-        print()
-        print(team_data)
+       
 
         # CompanyInfo instance
         company_info = CompanyInfo.objects.create(**validated_data)
@@ -161,3 +159,33 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
                 TeamMemberInfo.objects.create(company=instance, **member_data)
 
         return instance
+
+
+# serializers.py
+from rest_framework import serializers
+from .models import Inquiry, Appointment, Company
+class AppointmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appointment
+        fields = ['id', 'appointment_date']
+
+class InquirySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Inquiry
+        fields = [
+            'id', 'full_name', 'location', 'email', 'phone_number', 'category', 'sub_service',
+            'type_of_building', 'building_purpose', 'num_floors', 'land_area',
+            'architectural_style', 'architectural_style_other', 'budget_estimate',
+            'special_requirements', 'status', 'created_at',
+            'site_plan', 'architectural_plan', 'soil_test_report', 'foundation_design',
+            'electrical_plan', 'plumbing_plan', 'hvac_plan', 'construction_permit', 'cost_estimation'
+        ]
+
+# serializers.py
+class AppointmentSerializer(serializers.ModelSerializer):
+    inquiry = InquirySerializer(read_only=True)
+    company = serializers.CharField(source='company.company_name', read_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = ['id', 'inquiry', 'company', 'appointment_date', 'duration_minutes', 'status', 'created_at']
