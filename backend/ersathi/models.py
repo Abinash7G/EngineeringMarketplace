@@ -363,4 +363,58 @@ class Transaction(models.Model):
         super().save(*args, **kwargs)
         print("Transaction saved successfully.")
 
-"""
+"""""
+# models.py
+from django.db import models
+from django.conf import settings
+
+class Inquiry(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='inquiries')
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='inquiries', db_column='company_id')
+    full_name = models.CharField(max_length=100)
+    location = models.CharField(max_length=200)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=20)
+    category = models.CharField(max_length=100)
+    sub_service = models.CharField(max_length=100)
+    type_of_building = models.CharField(max_length=50, blank=True, null=True)
+    building_purpose = models.CharField(max_length=200, blank=True, null=True)
+    num_floors = models.PositiveIntegerField(blank=True, null=True)
+    land_area = models.CharField(max_length=50, blank=True, null=True)
+    architectural_style = models.CharField(max_length=100, blank=True, null=True)
+    architectural_style_other = models.CharField(max_length=100, blank=True, null=True)
+    budget_estimate = models.CharField(max_length=50, blank=True, null=True)
+    special_requirements = models.TextField(blank=True, null=True)
+    site_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+    architectural_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+    soil_test_report = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+    foundation_design = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+    electrical_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+    plumbing_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+    hvac_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+    construction_permit = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+    cost_estimation = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[('Pending', 'Pending'), ('Scheduled', 'Scheduled'), ('Completed', 'Completed')],
+        default='Pending'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.full_name} - {self.company.company_name}"
+
+class Appointment(models.Model):
+    inquiry = models.OneToOneField(Inquiry, on_delete=models.CASCADE, related_name='appointment')
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='appointments', db_column='company_id')
+    appointment_date = models.DateTimeField()
+    duration_minutes = models.PositiveIntegerField(default=21)
+    status = models.CharField(
+        max_length=20,
+        choices=[('Pending', 'Pending'), ('Confirmed', 'Confirmed')],
+        default='Pending'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.inquiry.full_name} - {self.appointment_date}"
