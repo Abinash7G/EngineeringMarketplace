@@ -1,47 +1,112 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useLocation, useNavigate } from 'react-router-dom';
+import KhaltiCheckout from "khalti-checkout-web";
 
+// MUI imports
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 
-const KhaltiPayment = () => {
-  const [loading, setLoading] = useState(false);
-     const location = useLocation();
-    const{amount, email, phone, name} = location.state || {NaN};
+const KhaltiPayments = ({ totalPrice = 0 }) => {
+  // State for Snackbar
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success", // or "error" or "warning" or "info"
+  });
 
-  const initiatePayment = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.post("http://localhost:8000/api/initiate-khalti-payment/", {
-        amount, // Amount in paisa
-        name: name,
-        email: email,
-        phone: phone,
-      });
-      console.log(amount, email, phone, name)
-      console.log(response)
-
-      if (response.data.payment_url) {
-        window.location.href = response.data.payment_url; // Redirect user to Khalti payment page
-      } else {
-        alert("Error initiating payment");
-      }
-    } catch (error) {
-      console.error("Payment initiation failed:", error);
-      alert("Failed to initiate payment");
-    } finally {
-      setLoading(false);
+  // Close handler for Snackbar
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
     }
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  // Khalti config
+  const khaltiConfig = {
+    publicKey: "test_public_key_11bc2e57406d437ca08a84a1bc30ddd2", // Test public key
+    productIdentity: "1234567890",
+    productName: "Engineering Service Payment",
+    productUrl: "http://gameofthrones.wikia.com/wiki/Dragons",
+    eventHandler: {
+      async onSuccess(payload) {
+        // Immediately inform user that payment was successful
+        setSnackbar({
+          open: true,
+          message: "Payment Successful! Verifying with server...",
+          severity: "success",
+        });
+
+        // Send token & amount (in paisa) to backend for verification
+        try {
+          const response = await axios.post(
+            "http://127.0.0.1:8000/api/verify-khalti-payment/",
+            {
+              token: payload.token,
+              amount: totalPrice * 100, // Convert NPR to paisa
+            }
+          );
+
+          // If the server verification succeeded, show success message
+          setSnackbar({
+            open: true,
+            message: response.data.message,
+            severity: "success",
+          });
+        } catch (error) {
+          console.error("Verification Error:", error.response?.data || error.message);
+          // Show an error if server verification fails
+          setSnackbar({
+            open: true,
+            message: "Payment verification failed. Please contact support.",
+            severity: "error",
+          });
+        }
+      },
+      onError(error) {
+        console.error("Payment Error:", error);
+        // Show a failure message
+        setSnackbar({
+          open: true,
+          message: "Payment Failed. Please try again.",
+          severity: "error",
+        });
+      },
+      onClose() {
+        console.log("Payment popup closed");
+      },
+    },
+    paymentPreference: ["KHALTI"],
+  };
+
+  // Initialize Khalti Checkout
+  const checkout = new KhaltiCheckout(khaltiConfig);
+
+  // Show the Khalti payment popup
+  const handlePayNow = () => {
+    // Ensure amount is in paisa (already handled by khaltiConfig)
+    checkout.show({ amount: totalPrice * 100 });
   };
 
   return (
-    <div>
-      <h2>Khalti Payment Integration</h2>
-      <p>Amount: {amount / 100} NPR</p>
-      <button onClick={initiatePayment} disabled={loading}>
-        {loading ? "Processing..." : "Pay with Khalti"}
+    <>
+      <button onClick={handlePayNow} style={{ padding: "10px 20px", fontSize: "16px" }}>
+        Pay with Khalti
       </button>
-    </div>
+
+      {/* MUI Snackbar + Alert for toast-like notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
   );
 };
 
-export default KhaltiPayment;
+export default KhaltiPayments;

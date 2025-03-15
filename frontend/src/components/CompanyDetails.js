@@ -44,7 +44,7 @@ const CompanyDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [wishlist] = useState([]); // Placeholder for wishlist data
-
+  const [cartItems] = useState([]);
   // Fetch company info
   const fetchCompanyInfo = async () => {
     try {
@@ -155,7 +155,7 @@ const CompanyDetails = () => {
   return (
     <>
       {/* Navbar */}
-      <ClientNavbar wishlist={wishlist} onNavigateToProfile={handleNavigateToProfile} />
+      <ClientNavbar wishlist={wishlist} cartItems={cartItems} onNavigateToProfile={handleNavigateToProfile} />
 
       <Container sx={{ mt: 12, mb: 6 }}>
         {/* Header */}
