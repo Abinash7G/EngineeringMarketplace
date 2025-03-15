@@ -69,7 +69,7 @@ const CDConsultingInquiryForm = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const [wishlist] = useState([]);
-
+  const [cartItems] = useState([]);
   const handleNavigateToProfile = () => {
     navigate("/client/profile");
   };
@@ -553,7 +553,7 @@ const CDConsultingInquiryForm = () => {
 
   return (
     <>
-      <ClientNavbar wishlist={wishlist} onNavigateToProfile={handleNavigateToProfile} />
+      <ClientNavbar wishlist={wishlist} cartItems={cartItems} onNavigateToProfile={handleNavigateToProfile} />
       <Box
         sx={{
           p: 4,

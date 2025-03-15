@@ -1,3 +1,4 @@
+// src/components/Cart.jsx
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -31,6 +32,7 @@ const Cart = () => {
       try {
         const response = await fetchCartItems();
         setCartItems(response.data);
+        console.log("Cart Items:", response.data); // Debug log
       } catch (error) {
         console.error("Error fetching cart items:", error);
       }
@@ -97,6 +99,12 @@ const Cart = () => {
   };
 
   const handleCheckout = () => {
+    // Validate that all items have a company_id
+    const invalidItems = cartItems.filter(item => !item.company && !item.company_id);
+    if (invalidItems.length > 0) {
+      alert("Some items are not associated with a company. Please contact support.");
+      return;
+    }
     if (rentingItems.length > 0 && verificationStatus !== "verified") {
       alert("You need to verify your profile to rent items.");
       navigate("/rent-verification");

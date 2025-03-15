@@ -11,6 +11,9 @@ import {
   MenuItem,
   Tabs,
   Tab,
+  Snackbar,
+  Alert,
+  Button,
 } from "@mui/material";
 import { ShoppingCart, Favorite } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -19,8 +22,9 @@ import API from "../services/api";
 const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }) => {
   const [products, setProducts] = useState([]);
   const [sortOption, setSortOption] = useState("");
-  const [tabValue, setTabValue] = useState("all"); // Add tab state
+  const [tabValue, setTabValue] = useState("all");
   const [verificationStatus, setVerificationStatus] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -63,7 +67,7 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
     if (option === "priceLowToHigh") {
       sortedProducts.sort((a, b) => a.price - b.price);
     } else if (option === "priceHighToLow") {
-      sortedProducts.sort((a, b) => b.price - a.price);
+      sortedProducts.sort((a, b) => b.price - b.price);
     }
     setProducts(sortedProducts);
   };
@@ -83,11 +87,16 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
 
   const handleAddToCartWithVerification = (product) => {
     if (product.category === "renting" && verificationStatus !== "verified") {
-      alert("You need to verify your profile to rent items.");
+      setSnackbarOpen(true);
       navigate("/upload-kyc");
       return;
     }
+    // Pass the entire product object (including company) to handleAddToCart
     handleAddToCart(product);
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -200,17 +209,17 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
                     ? `http://127.0.0.1:8000${product.image}`
                     : "https://via.placeholder.com/200"
                 }
-                alt={product.name}
+                alt={product.title}
                 sx={{ objectFit: "contain", borderBottom: "1px solid grey.300" }}
               />
 
               <CardContent sx={{ flexGrow: 1, padding: "16px" }}>
-                <Typography variant="h6" component="div" sx={{ fontWeight: "bold", mb: 1 }}>
-                  {product.name}
+                <Typography variant="h6" component="div" sx={{ color:"primary", fontWeight: "bold", mb: 1 }}>
+                  {product.title}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                {/* <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   {product.description}
-                </Typography>
+                </Typography> */}
                 <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
                   Rs. {product.price}
                 </Typography>
@@ -227,6 +236,46 @@ const CDProduct = ({ handleWishlistToggle, handleAddToCart, wishlistItems = [] }
           </Grid>
         ))}
       </Grid>
+
+      <Snackbar
+        open={snackbarOpen}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        sx={{
+          "& .MuiSnackbarContent-root": {
+            backgroundColor: "#007bff",
+            color: "white",
+            borderRadius: "8px",
+            padding: "10px 20px",
+          },
+        }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="warning"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={handleSnackbarClose}
+              sx={{
+                color: "white",
+                backgroundColor: "#007bff",
+                borderRadius: "20px",
+                padding: "5px 15px",
+                "&:hover": {
+                  backgroundColor: "#0056b3",
+                },
+              }}
+            >
+              OK
+            </Button>
+          }
+          sx={{ width: "100%", backgroundColor: "transparent", boxShadow: "none" }}
+        >
+          You need to verify your profile to rent items.
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

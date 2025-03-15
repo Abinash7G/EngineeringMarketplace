@@ -25,8 +25,10 @@ import ServicesManagement from './components/ServicesManagement';
 import MaterialsManagement from './components/MaterialsManagement';
 import ProfileSettings from './components/ProfileSettings';
 import CompanyDetails from './components/CompanyDetails';
-//import Esewa from './pages/Esewa';
+import EsewaPayment from './components/EsewaPayment';
 import KhaltiButton from './components/KhaltiButton';
+import Success from './components/Success';
+import Failure from './components/Failure';
 //import PaymentSuccess from './components/PaymentSuccess';
 //import KhaltiPayment from './components/KhaltiPayment';
 import ApprovedCompanies from './components/ApprovedCompanies';
@@ -67,8 +69,10 @@ const App = () => {
         <Route path="/client/wishlist" element={<Wishlist/>} />
         <Route path="/upload-kyc" element={<CDRentVerificationform/>}/>
 
+        <Route path="/success" element={<Success />} />
+        <Route path="/failure" element={<Failure />} />
         
-        <Route path="/checkout" element={<CDCheckoutForm/>}/>
+        <Route path="/checkout" element={<CDCheckoutForm buyingItems={[]} rentingItems={[]} cartTotal={0}/>}/>
         <Route path="/appointments" element={<Appointments/>} />
         <Route path="/documents" element={<Documents/>} />
         <Route path="/services-management" element={<ServicesManagement/>} />
@@ -77,9 +81,9 @@ const App = () => {
         <Route path="/companydetails/:id" element={<CompanyDetails/>} />
         <Route path="/CDConsultingInquiryForm/:id" element={<CDConsultingInquiryForm/>}/>
         <Route path="/InquiriesList" element={<InquiriesList/>}/>
-        {/*<Route path="/esewa" element={<Esewa/>} />*/}
+        <Route path="/esewa-payment" element={<EsewaPayment />} />
         <Route path="/khalti" element={<KhaltiButton/>} /> 
-{/*
+        {/*
         <Route path="/khalti1" element={<KhaltiPayment />} />
         <Route path="/payment/callback" element={<PaymentSuccess />} /> */}
         <Route path="/admin/rejected-companies" element={<ApprovedCompanies/>} /> 
