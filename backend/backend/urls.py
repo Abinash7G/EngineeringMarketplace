@@ -140,10 +140,14 @@ urlpatterns = [
     path('api/wishlist/', get_wishlist, name='get_wishlist'),
     path('api/wishlist/add/', add_to_wishlist, name='add_to_wishlist'),
     path('api/wishlist/remove/<int:product_id>/', remove_from_wishlist, name='remove_from_wishlist'),
+    #order
+    path('api/orders/create/', views.create_order, name='create_order'),
+    path('api/orders/', views.get_orders, name='get_orders'),
+    path('api/company/orders/', views.get_company_orders, name='get_company_orders'),
 
     # Payment
     path('api/verify-khalti-payment/', verify_khalti_payment, name='verify_khalti_payment'),
-
+    path('api/verify-esewa-payment/', views.verify_esewa_payment, name='verify_esewa_payment'),
     # Rent Verification
     path('api/rent-verification/', RentVerificationCreateView.as_view(), name='rent-verification-create'),
     path('api/rent-verification/<int:pk>/', RentVerificationAdminView.as_view(), name='rent-verification-admin'),
