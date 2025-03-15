@@ -418,3 +418,47 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f"{self.inquiry.full_name} - {self.appointment_date}"
+    
+
+
+###order
+
+class Order(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="orders")
+    order_type = models.CharField(max_length=20, choices=[('buying', 'Buying'), ('renting', 'Renting')])
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    renting_details = models.JSONField(null=True, blank=True)  # For renting-specific details
+    billing_details = models.JSONField(null=True, blank=True)  # For buying-specific details
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    def __str__(self):
+        return f"Order {self.id} - {self.order_type} for {self.company.company_name}"
+
+# OrderItem Model (Each product in an order)
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} in Order {self.order.id}"
+
+# PaymentDistribution Model (To split payments among companies)
+class PaymentDistribution(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="payment_distributions")
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_status = models.CharField(max_length=20, default='pending')
+    payment_reference = models.CharField(max_length=255, null=True, blank=True)  # e.g., Khalti transaction ID
+    created_at = models.DateTimeField(auto_now_add=True)
+    booking_id = models.CharField(max_length=255, null=True, blank=True)
+    def __str__(self):
+        return f"Payment of Rs. {self.amount} to {self.company.company_name} for Order {self.order.id}"
+

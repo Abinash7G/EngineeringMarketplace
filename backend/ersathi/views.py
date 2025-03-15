@@ -1060,7 +1060,7 @@ User = get_user_model()
 def get_cart(request):
     user = request.user
     cart_items = Cart.objects.filter(user=user)
-    data = [{'image':item.product.image.url, 'company_name': item.product.company.company_name, 'category':item.product.category, 'product_id': item.product.id, 'name': item.product.title, 'price': str(item.product.price), 'quantity': item.quantity} for item in cart_items]
+    data = [{'image':item.product.image.url, 'company_name': item.product.company.company_name, 'category':item.product.category, 'product_id': item.product.id, 'name': item.product.title, 'price': str(item.product.price), 'quantity': item.quantity, 'company': item.product.company.id } for item in cart_items]
     return Response(data)
 
 @api_view(['POST'])
@@ -1169,42 +1169,53 @@ class TransactionAPIView(APIView):
 '''''''''''''''''
 
 
-#Load API keys from .env file
+#Load API keys from .env fileimport os
+import json
+import requests
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from dotenv import load_dotenv
+
+# Load API keys from .env file
 load_dotenv()
-KHALTI_SECRET_KEY = os.getenv("KHALTI_SECRET_KEY")
+import os
+
+KHALTI_SECRET_KEY = os.getenv("KHALTI_SECRET_KEY", "test_secret_key_b6f287aab3874adf880ba3ef82f4471c")
+
 
 @csrf_exempt
 def verify_khalti_payment(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            token = data.get("token")  # Get token from frontend
-            amount = data.get("amount*100")  # Amount should be in paisa (NPR 10 = 1000 paisa)
-            print(data)
+            print("Received data:", data)  # Debug log
+            token = data.get("token")
+            amount = data.get("amount")  # Correct key
+
             if not token or not amount:
+                print("Missing token or amount:", {"token": token, "amount": amount})  # Debug log
                 return JsonResponse({"status": "failed", "message": "Missing token or amount"}, status=400)
 
-            # Khalti API URL for verifying payments
-            url = "https://khalti.com/api/v2/payment/verify/"
+            # Use test mode URL for Khalti
+            url = "https://a.khalti.com/api/v2/payment/verify/"  # Test mode URL
             headers = {"Authorization": f"Key {KHALTI_SECRET_KEY}"}
             payload = {"token": token, "amount": amount}
 
-            # Send request to Khalti for verification
+            print("Sending to Khalti:", payload)  # Debug log
             response = requests.post(url, json=payload, headers=headers)
             response_data = response.json()
+            print("Khalti Response:", response_data)  # Debug log
 
             if response.status_code == 200:
                 return JsonResponse({"status": "success", "message": "Payment Verified!", "data": response_data})
             else:
                 return JsonResponse({"status": "failed", "message": "Payment Verification Failed!", "data": response_data}, status=400)
 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            print("JSON Decode Error:", str(e))  # Debug log
             return JsonResponse({"status": "failed", "message": "Invalid JSON data"}, status=400)
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
-
-
-
 # khalti payment
 # from django.http import JsonResponse
 # from django.views.decorators.csrf import csrf_exempt
@@ -1766,3 +1777,297 @@ class CompanyAppointmentsView(APIView):
         except Exception as e:
             logger.error(f"Error in CompanyAppointmentsView: {str(e)}")
             return Response({"error": "Failed to fetch appointments"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+
+
+        ##order
+       # app/views.py
+       # app/views.py
+
+import uuid
+import requests  # Added missing import
+from django.core.mail import send_mail  # Added missing import
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Order, OrderItem, PaymentDistribution, Company, Product
+from .serializers import OrderSerializer
+from django.shortcuts import get_object_or_404
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_order(request):
+    booking_id = request.data.get("bookingId")
+    if not booking_id:
+        return Response({"error": "Booking ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = request.user
+    data = request.data
+    print("Received data:", data)  # Debug log for incoming data
+
+    buying_items_by_company = {}
+    renting_items_by_company = {}
+
+    # Validate buying items
+    if "buying_items" in data and data["buying_items"]:
+        for item in data["buying_items"]:
+            if not all(key in item for key in ["product_id", "name", "quantity", "price", "company_id"]):
+                return Response({"error": "All buying item fields (product_id, name, quantity, price, company_id) are required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            company_id = item.get("company_id")
+            if not company_id:
+                return Response({"error": "Company ID is required for each buying item"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                quantity = int(item["quantity"])
+                price = float(item["price"])
+            except (ValueError, TypeError):
+                return Response({"error": "Quantity and price must be valid numbers for buying item"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if quantity <= 0:
+                return Response({"error": "Quantity must be a positive integer for buying item"}, status=status.HTTP_400_BAD_REQUEST)
+            if price <= 0:
+                return Response({"error": "Price must be a positive number for buying item"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if company_id not in buying_items_by_company:
+                buying_items_by_company[company_id] = []
+            buying_items_by_company[company_id].append(item)
+
+    # Validate renting items
+    if "renting_items" in data and data["renting_items"]:
+        renting_details = data.get("renting_details") or {}
+        renting_days = renting_details.get("rentingDays", 1)
+        
+        try:
+            renting_days = int(renting_days)
+        except (ValueError, TypeError):
+            return Response({"error": "Renting days must be a valid integer"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if renting_days <= 0:
+            return Response({"error": "Renting days must be a positive integer"}, status=status.HTTP_400_BAD_REQUEST)
+
+        for item in data["renting_items"]:
+            if not all(key in item for key in ["product_id", "name", "quantity", "price", "company_id"]):
+                return Response({"error": "All renting item fields (product_id, name, quantity, price, company_id) are required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            company_id = item.get("company_id")
+            if not company_id:
+                return Response({"error": "Company ID is required for each renting item"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                quantity = int(item["quantity"])
+                price = float(item["price"])
+            except (ValueError, TypeError):
+                return Response({"error": "Quantity and price must be valid numbers for renting item"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if quantity <= 0:
+                return Response({"error": "Quantity must be a positive integer for renting item"}, status=status.HTTP_400_BAD_REQUEST)
+            if price <= 0:
+                return Response({"error": "Price must be a positive number for renting item"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if company_id not in renting_items_by_company:
+                renting_items_by_company[company_id] = []
+            renting_items_by_company[company_id].append(item)
+
+    if not buying_items_by_company and not renting_items_by_company:
+        return Response({"error": "At least one buying or renting item is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Handle transaction_uuid
+    transaction_uuid = data.get("transaction_uuid")  # Look for transaction_uuid at the top level
+    if not transaction_uuid:
+        transaction_uuid = str(uuid.uuid4())  # Generate a new UUID if not provided
+    print(f"Initial transaction_uuid: {transaction_uuid}")
+
+    # Check for duplicate transaction_uuid in PaymentDistribution
+    max_attempts = 5
+    attempt = 0
+    while PaymentDistribution.objects.filter(payment_reference=transaction_uuid).exists():
+        if attempt >= max_attempts:
+            return Response({"error": "Failed to generate a unique transaction UUID after multiple attempts"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        transaction_uuid = str(uuid.uuid4())
+        attempt += 1
+        print(f"Duplicate transaction_uuid detected, generating new one: {transaction_uuid}")
+
+    print(f"Final transaction_uuid: {transaction_uuid}")
+
+    orders = []
+    payment_distributions = []
+
+    # Process buying items
+    for company_id, items in buying_items_by_company.items():
+        try:
+            company = get_object_or_404(Company, id=company_id)
+        except Exception as e:
+            print(f"Error fetching company {company_id}: {str(e)}")
+            return Response({"error": f"Company with ID {company_id} not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        total_amount = sum(float(item["price"]) * int(item["quantity"]) for item in items)
+
+        order = Order.objects.create(
+            user=user,
+            company=company,
+            order_type="buying",
+            total_amount=total_amount,
+            billing_details=data.get("billing_details", {}),
+            status="pending"
+        )
+
+        for item in items:
+            try:
+                product = get_object_or_404(Product, id=item["product_id"])
+            except Exception as e:
+                print(f"Error fetching product {item['product_id']}: {str(e)}")
+                return Response({"error": f"Product with ID {item['product_id']} not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=int(item["quantity"]),
+                price=float(item["price"])
+            )
+
+        orders.append(order)
+        payment_distributions.append({"order": order, "company": company, "amount": total_amount})
+
+    # Process renting items
+    for company_id, items in renting_items_by_company.items():
+        try:
+            company = get_object_or_404(Company, id=company_id)
+        except Exception as e:
+            print(f"Error fetching company {company_id}: {str(e)}")
+            return Response({"error": f"Company with ID {company_id} not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        renting_details = data.get("renting_details") or {}
+        renting_days = int(renting_details.get("rentingDays", 1))
+        total_amount = sum(float(item["price"]) * int(item["quantity"]) for item in items) * renting_days
+
+        order = Order.objects.create(
+            user=user,
+            company=company,
+            order_type="renting",
+            total_amount=total_amount,
+            renting_details=renting_details,
+            status="pending"
+        )
+
+        for item in items:
+            try:
+                product = get_object_or_404(Product, id=item["product_id"])
+            except Exception as e:
+                print(f"Error fetching product {item['product_id']}: {str(e)}")
+                return Response({"error": f"Product with ID {item['product_id']} not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=int(item["quantity"]),
+                price=float(item["price"])
+            )
+
+        orders.append(order)
+        payment_distributions.append({"order": order, "company": company, "amount": total_amount})
+
+    # Create payment distributions
+    for distribution in payment_distributions:
+        PaymentDistribution.objects.create(
+            order=distribution["order"],
+            company=distribution["company"],
+            amount=distribution["amount"],
+            payment_reference=transaction_uuid,
+            payment_status="pending"
+        )
+
+    serializer = OrderSerializer(orders, many=True)
+    return Response({"orders": serializer.data, "transaction_uuid": transaction_uuid}, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_orders(request):
+    user = request.user
+    orders = Order.objects.filter(user=user).order_by('-created_at')
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_company_orders(request):
+    user = request.user
+    company = get_object_or_404(Company, user=user)
+    orders = Order.objects.filter(company=company).order_by('-created_at')
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def verify_esewa_payment(request):
+    data = request.data
+    transaction_uuid = data.get('transaction_uuid')
+    amount = data.get('total_amount')
+    booking_id = data.get('bookingId')
+
+    verification_url = "https://rc-epay.esewa.com.np/api/epay/transrec"
+    payload = {
+        "product_code": "EPAYTEST",
+        "total_amount": amount,
+        "transaction_uuid": transaction_uuid,
+        "bookingId": booking_id
+    }
+
+    try:
+        response = requests.get(verification_url, params=payload)
+        response_data = response.json()
+
+        if response_data.get("status") == "success":
+            orders = Order.objects.filter(payment_distributions__payment_reference=transaction_uuid)
+            for order in orders:
+                order.status = "completed"
+                order.save()
+                distributions = PaymentDistribution.objects.filter(order=order, payment_reference=transaction_uuid)
+                for dist in distributions:
+                    dist.payment_status = "completed"
+                    dist.save()
+
+                if order.order_type == "buying" and order.billing_details:
+                    billing_details = order.billing_details
+                    subject = f'Invoice for Order #{order.id}'
+                    message = f'''
+                    Dear {billing_details.get('fullName', 'Customer')},
+
+                    Thank you for your purchase!
+                    Order ID: {order.id}
+                    Total Amount: Rs. {order.total_amount}
+                    Delivery Location: {billing_details.get('deliveryLocation', 'N/A')}
+
+                    Best regards,
+                    Your Company
+                    '''
+                    send_mail(subject, message, 'noreply@yourcompany.com', [billing_details.get('email', 'default@example.com')], fail_silently=True)
+
+            return Response({"message": "Payment verified successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "Payment verification failed"}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"message": f"Error verifying payment: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+    user = request.user
+    data = {
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "phone_number": "9864699323",
+        "email": user.email,
+    }
+    return Response(data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def rent_verification(request):
+    user = request.user
+    data = {"status": "verified"}  # Replace with actual logic
+    return Response(data)
