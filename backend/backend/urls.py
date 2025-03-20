@@ -6,13 +6,19 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from ersathi import views
 from ersathi.views import (
+    CheckNewInquiriesView,
+    CompanyAppointmentsView,
     CompanyInquiriesView,
+    GetLastInquiryCheckView,
+    MarkInquiriesCheckedView,
     RentVerificationAdminView,
     RentVerificationCreateView,
     RentVerificationListView,
     RentVerificationUserUpdateView,
     SubmitInquiryView,
     Test,
+    UpdateAppointmentStatusView,
+    UpdateInquiryStatusView,
     
 
     company_info,
@@ -108,9 +114,13 @@ urlpatterns = [
     path('api/company-services/<int:company_id>/', get_company_services_by_id, name='get_company_services_by_id'),
 #
     path('api/submit-inquiry/<int:company_id>/', views.SubmitInquiryView.as_view(), name='submit-inquiry'),
-    path('api/company-inquiries/', views.CompanyInquiriesView.as_view(), name='company-inquiries'),
-    path('api/update-inquiry-status/<int:inquiry_id>/', views.UpdateInquiryStatusView.as_view(), name='update-inquiry-status'),
-    path('company-appointments/', views.CompanyAppointmentsView.as_view(), name='company-appointments'),
+    path('api/company-inquiries/', CompanyInquiriesView.as_view(), name='company-inquiries'),
+    path('api/update-inquiry-status/<int:inquiry_id>/', UpdateInquiryStatusView.as_view(), name='update-inquiry-status'),
+    path('company-appointments/', CompanyAppointmentsView.as_view(), name='company-appointments'),
+    path('mark-inquiries-checked/', MarkInquiriesCheckedView.as_view(), name='mark-inquiries-checked'),
+    path('check-new-company-inquiries/', CheckNewInquiriesView.as_view(), name='check-new-inquiries'),
+    path('api/get-last-inquiry-check/', GetLastInquiryCheckView.as_view(), name='get-last-inquiry-check'),
+    path('appointments/<int:appointment_id>/update-status/', UpdateAppointmentStatusView.as_view(), name='update-appointment-status'),
    # path('api/submit-inquiry/<int:company_id>/', SubmitInquiryView.as_view(), name='submit-inquiry'),
    # path('api/company-inquiries/', CompanyInquiriesView.as_view(), name='company-inquiries'),
     # Services

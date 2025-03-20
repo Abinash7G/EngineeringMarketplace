@@ -27,9 +27,10 @@ class Company(models.Model):
     is_rejected = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    last_inquiry_check = models.DateTimeField(null=True, blank=True)  # New field to track last inquiry check
     def __str__(self):
         return self.company_name
+
 
 # Service Model
 from django.db import models
@@ -404,6 +405,28 @@ class Inquiry(models.Model):
     def __str__(self):
         return f"{self.full_name} - {self.company.company_name}"
 
+
+# Signal to send WebSocket notification on new inquiry
+from django.dispatch import receiver
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.db.models.signals import post_save
+@receiver(post_save, sender=Inquiry)
+def send_inquiry_notification(sender, instance, created, **kwargs):
+    if created:
+        company = instance.company
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'company_{company.id}_inquiries',
+            {
+                'type': 'inquiry_update',
+                'message': 'New inquiry received'
+            }
+        )
+
+
+
+
 class Appointment(models.Model):
     inquiry = models.OneToOneField(Inquiry, on_delete=models.CASCADE, related_name='appointment')
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='appointments', db_column='company_id')
@@ -411,7 +434,7 @@ class Appointment(models.Model):
     duration_minutes = models.PositiveIntegerField(default=21)
     status = models.CharField(
         max_length=20,
-        choices=[('Pending', 'Pending'), ('Confirmed', 'Confirmed')],
+        choices=[('Pending', 'Pending'), ('Confirmed', 'Confirmed'), ('No-Show', 'No-Show'), ('Completed', 'Completed')],
         default='Pending'
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -422,6 +445,7 @@ class Appointment(models.Model):
 
 
 ###order
+
 
 class Order(models.Model):
     STATUS_CHOICES = (
