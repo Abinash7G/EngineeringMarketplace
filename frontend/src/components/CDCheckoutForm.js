@@ -337,6 +337,7 @@
 // src/components/CDCheckoutForm.jsx
 
 // src/components/CDCheckoutForm.jsx
+
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -363,6 +364,8 @@ import CryptoJS from "crypto-js";
 import ReCAPTCHA from "react-google-recaptcha";
 import { v4 as uuidv4 } from "uuid";
 import KhaltiPayments from "./KhaltiButton"; // Ensure path is correct
+// import esewaIcon from "../assets/esewa-icon.png"; // Adjust path to your eSewa icon
+// import khaltiIcon from "../assets/khalti-icon.png"; // Adjust path to your Khalti icon
 
 const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal }) => {
   const navigate = useNavigate();
@@ -618,6 +621,20 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal }) => {
     }
   };
 
+  const handleKhaltiPayment = async () => {
+    try {
+      const transaction_uuid = await handleCreateOrder();
+      if (!transaction_uuid) {
+        throw new Error("Transaction UUID is missing");
+      }
+      return transaction_uuid;
+    } catch (error) {
+      console.error("Error initiating Khalti payment:", error);
+      alert("Failed to initiate Khalti payment. Please try again.");
+      throw error;
+    }
+  };
+
   const handlePaymentSuccess = async (paymentData) => {
     try {
       const payload = {
@@ -781,8 +798,26 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal }) => {
                 onChange={handlePaymentMethodChange}
                 name="payment-method"
               >
-                <FormControlLabel value="esewa" control={<Radio />} label="Pay with eSewa" />
-                <FormControlLabel value="khalti" control={<Radio />} label="Pay with Khalti" />
+                <FormControlLabel
+                  value="esewa"
+                  control={<Radio />}
+                  label={
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      {/* <img src={esewaIcon} alt="eSewa" style={{ width: 24, height: 24, marginRight: 8 }} /> */}
+                      Pay with eSewa
+                    </Box>
+                  }
+                />
+                <FormControlLabel
+                  value="khalti"
+                  control={<Radio />}
+                  label={
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      {/* <img src={khaltiIcon} alt="Khalti" style={{ width: 24, height: 24, marginRight: 8 }} /> */}
+                      Pay with Khalti
+                    </Box>
+                  }
+                />
               </RadioGroup>
             </FormControl>
           </Box>
@@ -809,6 +844,7 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal }) => {
             <Box sx={{ mt: 2 }}>
               <KhaltiPayments
                 totalPrice={totalPrice}
+                transactionUuid={transactionUuid || handleKhaltiPayment()} // Trigger order creation if not already set
                 onSuccess={(paymentData) => handlePaymentSuccess({ ...paymentData, method: "khalti" })}
               />
             </Box>
