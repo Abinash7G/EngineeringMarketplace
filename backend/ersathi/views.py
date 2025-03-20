@@ -1606,8 +1606,9 @@ def get_company_services_by_id(request, company_id):
     except Exception as e:
         logger.error(f"Error in get_company_services_by_id: {str(e)}")
         return JsonResponse({"error": str(e)}, status=400)
+    
 
-# views.py
+##inquary
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -1623,6 +1624,25 @@ import logging
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Signal to send WebSocket notification on new inquiry
+from django.dispatch import receiver
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.db.models.signals import post_save
+
+@receiver(post_save, sender=Inquiry)
+def send_inquiry_notification(sender, instance, created, **kwargs):
+    if created:
+        company = instance.company
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'company_{company.id}_inquiries',
+            {
+                'type': 'inquiry_update',
+                'message': 'New inquiry received'
+            }
+        )
+
 class SubmitInquiryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1630,15 +1650,13 @@ class SubmitInquiryView(APIView):
         try:
             user = request.user
             company = get_object_or_404(Company, id=company_id)
-
             print("Raw POST data:", dict(request.POST))
 
             num_floors_value = request.POST.get('num_floors', None)
             num_floors = int(num_floors_value) if num_floors_value and num_floors_value.strip() else None
-            # Collect inquiry data with proper instances for ForeignKey fields
             inquiry_data = {
-                'user': user,  # Pass the CustomUser instance, not just the ID
-                'company': company,  # Pass the Company instance, not just the ID
+                'user': user,
+                'company': company,
                 'full_name': request.POST.get('full_name', ''),
                 'location': request.POST.get('location', ''),
                 'email': request.POST.get('email', ''),
@@ -1647,26 +1665,23 @@ class SubmitInquiryView(APIView):
                 'sub_service': request.POST.get('sub_service', ''),
                 'type_of_building': request.POST.get('type_of_building', ''),
                 'building_purpose': request.POST.get('building_purpose', ''),
-                'num_floors': request.POST.get('num_floors', '0'),
+                'num_floors': num_floors,
                 'land_area': request.POST.get('land_area', ''),
                 'architectural_style': request.POST.get('architectural_style', ''),
                 'architectural_style_other': request.POST.get('architectural_style_other', ''),
                 'budget_estimate': request.POST.get('budget_estimate', ''),
                 'special_requirements': request.POST.get('special_requirements', ''),
-                'status': 'Pending',  # Default status
+                'status': 'Pending',
             }
 
-            # Create inquiry instance
             inquiry = Inquiry(**inquiry_data)
 
-            # Handle file uploads
             for field in ['site_plan', 'architectural_plan', 'soil_test_report', 'foundation_design',
                          'electrical_plan', 'plumbing_plan', 'hvac_plan', 'construction_permit', 'cost_estimation']:
                 if field in request.FILES:
                     setattr(inquiry, field, request.FILES[field])
             inquiry.save()
 
-            # Appointment Logic
             tomorrow = timezone.now().date() + timedelta(days=1)
             daily_appointments = Appointment.objects.filter(
                 company=company,
@@ -1688,17 +1703,15 @@ class SubmitInquiryView(APIView):
             )
             appointment.save()
 
-            # Update inquiry status to 'Scheduled' after appointment is set
             inquiry.status = 'Scheduled'
             inquiry.save()
 
-            # Send email (configure EMAIL_* in settings.py)
             send_mail(
                 'Appointment Confirmation',
                 f'Your appointment is scheduled for {appointment_time.strftime("%Y-%m-%d %I:%M %p")} with {company.company_name}',
                 'fybproject6@gmail.com',
                 [inquiry.email],
-                fail_silently=True,  # Set to False in production with proper error handling
+                fail_silently=True,
             )
 
             serializer = InquirySerializer(inquiry)
@@ -1712,27 +1725,34 @@ class SubmitInquiryView(APIView):
             return Response({"error": "Company not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logger.error(f"Error in SubmitInquiryView: {str(e)}")
-            return Response({"error": "An error occurred while submitting the inquiry"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# ersathi/views.py
 class CompanyInquiriesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
-            # Debug: Print company_id
-            company_id = getattr(request.user, 'company_id', None)
-            print(f"Company ID: {company_id}")
-            if not company_id:
+            # Ensure the user has a related company
+            if not hasattr(request.user, 'company'):
                 return Response({"error": "Company not associated with this user"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Fetch inquiries for this company
+            company = request.user.company
+            company_id = company.id
+            print(f"Company ID from user: {company_id}")
+
             inquiries = Inquiry.objects.filter(company_id=company_id)
+            print(f"Inquiries found: {inquiries.count()}")  # Debug log
+            if not inquiries.exists():
+                return Response([], status=status.HTTP_200_OK)
             serializer = InquirySerializer(inquiries, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Exception as e:
             logger.error(f"Error in CompanyInquiriesView: {str(e)}")
             return Response({"error": "Failed to load inquiries"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 class UpdateInquiryStatusView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1741,7 +1761,6 @@ class UpdateInquiryStatusView(APIView):
         try:
             inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=request.user.company)
             status = request.data.get('status')
-            # Get valid status choices from the model field
             valid_statuses = [choice[0] for choice in Inquiry._meta.get_field('status').choices]
             if status in valid_statuses:
                 inquiry.status = status
@@ -1751,13 +1770,7 @@ class UpdateInquiryStatusView(APIView):
         except Exception as e:
             logger.error(f"Error in UpdateInquiryStatusView: {str(e)}")
             return Response({"error": "Failed to update status"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
 
-    
-
-
-
-# views.py
 class CompanyAppointmentsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1777,10 +1790,74 @@ class CompanyAppointmentsView(APIView):
         except Exception as e:
             logger.error(f"Error in CompanyAppointmentsView: {str(e)}")
             return Response({"error": "Failed to fetch appointments"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+# views.py
+class UpdateAppointmentStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, appointment_id):
+        try:
+            appointment = get_object_or_404(Appointment, id=appointment_id, company=request.user.company)
+            new_status = request.data.get('status')
+            valid_statuses = [choice[0] for choice in Appointment._meta.get_field('status').choices]
+
+            if new_status not in valid_statuses:
+                return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+
+            appointment.status = new_status
+            appointment.save()
+
+            # Update the inquiry status based on the appointment status
+            inquiry = appointment.inquiry
+            if new_status == "No-Show":
+                inquiry.status = "Pending"  # Client didn't show up, set inquiry back to Pending
+            elif new_status == "Completed":
+                inquiry.status = "Completed"  # Consultation done, set inquiry to Completed
+            inquiry.save()
+
+            return Response({"message": "Appointment status updated"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Error in UpdateAppointmentStatusView: {str(e)}")
+            return Response({"error": "Failed to update status"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class CheckNewInquiriesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            company = request.user.company
+            if not company:
+                return Response({"error": "Company not associated with this user"}, status=400)
+            
+            last_check = company.last_inquiry_check or timezone.datetime(1970, 1, 1)
+            new_inquiries = Inquiry.objects.filter(company=company, created_at__gt=last_check).exists()
+            return Response({"has_new_inquiries": new_inquiries}, status=200)
+        except Exception as e:
+            logger.error(f"Error in CheckNewInquiriesView: {str(e)}")
 
 
+class GetLastInquiryCheckView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        try:
+            company = request.user.company
+            last_check = company.last_inquiry_check or datetime(1970, 1, 1, tzinfo=timezone.utc)
+            return Response({"last_inquiry_check": last_check}, status=200)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+class MarkInquiriesCheckedView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            company = request.user.company
+            company.last_inquiry_check = timezone.now()
+            company.save()
+            return Response({"status": "success"}, status=200)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
 
         ##order
