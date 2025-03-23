@@ -209,3 +209,69 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'order_type', 'items', 'total_amount', 'renting_details', 'billing_details', 'status', 'created_at']
+
+
+
+# serializers.py
+# from rest_framework import serializers
+# from .models import Agreement
+
+# class AgreementSerializer(serializers.ModelSerializer):
+#     inquiry = serializers.StringRelatedField()
+#     service = serializers.StringRelatedField()
+#     document = serializers.FileField()
+#     signed_document = serializers.FileField()
+
+#     class Meta:
+#         model = Agreement
+#         fields = ['id', 'inquiry', 'service', 'status', 'created_at', 'document', 'signed_document']# serializers.py
+# from rest_framework import serializers
+# from .models import Agreement
+
+# class AgreementSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Agreement
+#         fields = ['id', 'inquiry', 'company', 'user', 'service', 'company_representative_name', 'service_charge', 'document', 'signed_document', 'status', 'created_at', 'signed_at']
+#         read_only_fields = ['created_at', 'signed_at']
+
+#     def to_representation(self, instance):
+#         representation = super().to_representation(instance)
+#         # Include full URLs for document and signed_document
+#         if instance.document:
+#             representation['document'] = instance.document.url
+#         if instance.signed_document:
+#             representation['signed_document'] = instance.signed_document.url
+#         # Include nested fields for inquiry and service
+#         representation['inquiry'] = {'full_name': instance.inquiry.full_name}
+#         representation['service'] = {'name': instance.service.name}
+#         return representation
+from rest_framework import serializers
+from .models import Agreement
+
+class AgreementSerializer(serializers.ModelSerializer):
+    document = serializers.SerializerMethodField()
+    signed_document = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Agreement
+        fields = ['id', 'inquiry', 'company', 'user', 'service', 'company_representative_name', 'service_charge', 'document', 'signed_document', 'status', 'created_at', 'signed_at']
+        read_only_fields = ['created_at', 'signed_at']
+
+    def get_document(self, obj):
+        if obj.document:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.document.url)
+        return None
+
+    def get_signed_document(self, obj):
+        if obj.signed_document:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.signed_document.url)
+        return None
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        # Include nested fields for inquiry and service
+        representation['inquiry'] = {'full_name': instance.inquiry.full_name}
+        representation['service'] = {'name': instance.service.name}
+        return representation

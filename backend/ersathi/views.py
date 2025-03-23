@@ -1760,16 +1760,36 @@ class UpdateInquiryStatusView(APIView):
     def patch(self, request, inquiry_id):
         try:
             inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=request.user.company)
-            status = request.data.get('status')
+            new_status = request.data.get('status')
             valid_statuses = [choice[0] for choice in Inquiry._meta.get_field('status').choices]
-            if status in valid_statuses:
-                inquiry.status = status
-                inquiry.save()
-                return Response({"message": "Status updated"}, status=status.HTTP_200_OK)
-            return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if new_status not in valid_statuses:
+                return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+
+            old_status = inquiry.status
+            inquiry.status = new_status
+            inquiry.save()
+
+            # Send email only when changing to Scheduled
+            if new_status == 'Scheduled':
+                if hasattr(inquiry, 'appointment'):
+                    appointment = inquiry.appointment
+                    send_mail(
+                        'Appointment Rescheduled' if old_status == 'Scheduled' else 'Appointment Scheduled',
+                        f'Your appointment is now scheduled for {appointment.appointment_date.strftime("%Y-%m-%d %I:%M %p")}',
+                        'fybproject6@gmail.com',
+                        [inquiry.email],
+                        fail_silently=True,
+                    )
+                else:
+                    logger.warning(f"No appointment found for inquiry {inquiry_id}")
+
+            return Response({"message": "Status updated"}, status=status.HTTP_200_OK)
+            
         except Exception as e:
-            logger.error(f"Error in UpdateInquiryStatusView: {str(e)}")
+            logger.error(f"UpdateInquiryStatusView error: {str(e)}")
             return Response({"error": "Failed to update status"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class CompanyAppointmentsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1858,6 +1878,61 @@ class MarkInquiriesCheckedView(APIView):
             return Response({"status": "success"}, status=200)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
+
+#appointment
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
+from rest_framework import status
+import logging
+
+logger = logging.getLogger(__name__)
+
+class UpdateAppointmentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, appointment_id):
+        try:
+            appointment = get_object_or_404(Appointment, id=appointment_id, company=request.user.company)
+            new_date = request.data.get('appointment_date')
+            new_status = request.data.get('status')
+            if new_date:
+                appointment.appointment_date = new_date
+            if new_status:
+                valid_statuses = [choice[0] for choice in Appointment._meta.get_field('status').choices]
+                if new_status not in valid_statuses:
+                    return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+                appointment.status = new_status
+            appointment.save()
+            return Response({"message": "Appointment updated"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error in UpdateAppointmentView: {str(e)}")
+            return Response({"error": "Failed to update appointment"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class DeleteAppointmentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, appointment_id):
+        try:
+            appointment = get_object_or_404(Appointment, id=appointment_id, company=request.user.company)
+            inquiry = appointment.inquiry
+            appointment.delete()
+            inquiry.status = 'Pending'  # Reset inquiry status
+            inquiry.save()
+            return Response({"message": "Appointment deleted"}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            logger.error(f"Error in DeleteAppointmentView: {str(e)}")
+            return Response({"error": "Failed to delete appointment"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+
+
+
 
 
         ##order
@@ -2148,3 +2223,275 @@ def rent_verification(request):
     user = request.user
     data = {"status": "verified"}  # Replace with actual logic
     return Response(data)
+
+
+#View to Generate the Agreement
+# views.py
+# import os
+# from django.core.files import File
+# from django.shortcuts import get_object_or_404
+# from django.template.loader import render_to_string
+# from django.core.mail import EmailMessage
+# from django.conf import settings
+# from weasyprint import HTML
+# from rest_framework.decorators import api_view, permission_classes
+# from rest_framework.permissions import IsAuthenticated
+# from rest_framework.response import Response
+# from rest_framework import status
+# from .models import Appointment, Inquiry, Company, Service, Agreement, CompanyServices
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def generate_agreement(request, appointment_id):
+#     try:
+#         # Fetch the appointment and related objects
+#         appointment = get_object_or_404(Appointment, id=appointment_id)
+#         inquiry = appointment.inquiry
+#         company = appointment.company
+
+#         # Get the service from the inquiry or related models
+#         # Assuming Inquiry has a 'service' field (ForeignKey to Service)
+#         if hasattr(inquiry, 'service'):
+#             service = inquiry.service
+#         else:
+#             # If Inquiry doesn't have a direct 'service' field, try to get it via sub_service or CompanyServices
+#             # Check if sub_service matches a Service name (if sub_service is a string)
+#             service = Service.objects.filter(name=inquiry.sub_service).first()
+#             if not service:
+#                 # Alternatively, look up the service via CompanyServices
+#                 company_service = CompanyServices.objects.filter(company=company, service__name=inquiry.sub_service).first()
+#                 if company_service:
+#                     service = company_service.service
+#                 else:
+#                     return Response({'error': 'Service not found for this inquiry'}, status=status.HTTP_400_BAD_REQUEST)
+
+#         # Get data from the request
+#         service_charge = request.data.get('service_charge')
+#         if not service_charge:
+#             return Response({'error': 'Service charge is required'}, status=status.HTTP_400_BAD_REQUEST)
+#         additional_terms = request.data.get('additional_terms', '')
+
+#         # Prepare context for the template
+#         context = {
+#             'inquiry': inquiry,
+#             'company': company,
+#             'service': service,
+#             'company_representative_name': company.representative_name or 'Unknown',
+#             'service_charge': service_charge,
+#             'additional_terms': additional_terms,
+#         }
+
+#         # Render the template to HTML
+#         html_string = render_to_string('agreement_template.html', context)
+
+#         # Generate PDF
+#         pdf_file_path = os.path.join(settings.MEDIA_ROOT, 'agreements', f'agreement_{appointment.id}.pdf')
+#         HTML(string=html_string).write_pdf(pdf_file_path)
+
+#         # Save the agreement in the database
+#         with open(pdf_file_path, 'rb') as pdf_file:
+#             agreement = Agreement.objects.create(
+#                 inquiry=inquiry,
+#                 company=company,
+#                 client=inquiry.client,  # Assuming Inquiry has a 'client' field (ForeignKey to User)
+#                 service=service,
+#                 company_representative_name=company.representative_name or 'Unknown',
+#                 service_charge=service_charge,
+#                 document=File(pdf_file, name=os.path.basename(pdf_file_path)),
+#                 status='Sent',
+#             )
+
+#         # Send email to the client
+#         email = EmailMessage(
+#             subject=f'Construction Agreement for {service.name}',
+#             body='Please find the attached agreement for your service.',
+#             from_email=settings.EMAIL_HOST_USER,
+#             to=[inquiry.email],
+#         )
+#         email.attach_file(pdf_file_path)
+#         email.send()
+
+#         return Response({'message': 'Agreement generated and sent successfully'}, status=status.HTTP_200_OK)
+
+#     except Exception as e:
+#         print(f"Error in generate_agreement: {str(e)}")
+#         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+import os
+from django.core.files import File
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.core.mail import EmailMessage
+from django.conf import settings
+from weasyprint import HTML
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Appointment, Inquiry, Company, Service, Agreement, CompanyServices
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_agreement(request, appointment_id):
+    try:
+        # Fetch the appointment and related objects
+        appointment = get_object_or_404(Appointment, id=appointment_id)
+        inquiry = appointment.inquiry
+        company = appointment.company
+
+        # Get the service from the inquiry
+        if hasattr(inquiry, 'service'):
+            service = inquiry.service
+        else:
+            # If Inquiry doesn't have a direct 'service' field, try to get it via sub_service or CompanyServices
+            service = Service.objects.filter(name=inquiry.sub_service).first()
+            if not service:
+                company_service = CompanyServices.objects.filter(company=company, service__name=inquiry.sub_service).first()
+                if company_service:
+                    service = company_service.service
+                else:
+                    return Response({'error': 'Service not found for this inquiry'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get data from the request
+        service_charge = request.data.get('service_charge')
+        if not service_charge:
+            return Response({'error': 'Service charge is required'}, status=status.HTTP_400_BAD_REQUEST)
+        additional_terms = request.data.get('additional_terms', '')
+        company_representative_name = request.data.get('company_representative_name')
+        if not company_representative_name:
+            return Response({'error': 'Company representative name is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Prepare context for the template
+        context = {
+            'inquiry': inquiry,
+            'company': company,
+            'service': service,
+            'company_representative_name': company_representative_name,
+            'service_charge': service_charge,
+            'additional_terms': additional_terms,
+        }
+
+        # Render the template to HTML
+        html_string = render_to_string('agreement_template.html', context)
+
+        # Generate PDF
+        pdf_file_path = os.path.join(settings.MEDIA_ROOT, 'agreements', f'agreement_{appointment.id}.pdf')
+        HTML(string=html_string).write_pdf(pdf_file_path)
+
+        # Save the agreement in the database
+        with open(pdf_file_path, 'rb') as pdf_file:
+            agreement = Agreement.objects.create(
+                inquiry=inquiry,
+                company=company,
+                user=inquiry.user,  # Assuming Inquiry has a 'client' field
+                service=service,
+                company_representative_name=company_representative_name,
+                service_charge=service_charge,
+                document=File(pdf_file, name=os.path.basename(pdf_file_path)),
+                status='Sent',
+            )
+
+        # Send email to the client
+        email = EmailMessage(
+            subject=f'Construction Agreement for {service.name}',
+            body='Please find the attached agreement for your service.',
+            from_email=settings.EMAIL_HOST_USER,
+            to=[inquiry.email],
+        )
+        email.attach_file(pdf_file_path)
+        email.send()
+
+        return Response({'message': 'Agreement generated and sent successfully'}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print(f"Error in generate_agreement: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+# # views.py
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework.permissions import IsAuthenticated
+# from .models import Agreement
+# from .serializers import AgreementSerializer
+
+# class CompanyAgreementsView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         company_id = request.user.company.id
+#         agreements = Agreement.objects.filter(company_id=company_id)
+#         serializer = AgreementSerializer(agreements, many=True)
+#         return Response(serializer.data)
+
+# class ClientAgreementsView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         agreements = Agreement.objects.filter(user=request.user)
+#         serializer = AgreementSerializer(agreements, many=True)
+#         return Response(serializer.data)
+
+# class UpdateAgreementView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def patch(self, request, agreement_id):
+#         agreement = get_object_or_404(Agreement, id=agreement_id)
+#         signed_document = request.FILES.get('signed_document')
+#         status = request.data.get('status')
+
+#         if signed_document:
+#             agreement.signed_document = signed_document
+#         if status:
+#             agreement.status = status
+#             if status == 'Signed':
+#                 agreement.signed_at = timezone.now()
+
+#         agreement.save()
+#         serializer = AgreementSerializer(agreement)
+#         return Response(serializer.data)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
+from .models import Agreement
+from .serializers import AgreementSerializer
+from django.utils import timezone
+
+class CompanyAgreementsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        company_id = request.user.company.id
+        agreements = Agreement.objects.filter(company_id=company_id)
+        serializer = AgreementSerializer(agreements, many=True, context={'request': request})
+        return Response(serializer.data)
+
+class ClientAgreementsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        agreements = Agreement.objects.filter(user=request.user)
+        serializer = AgreementSerializer(agreements, many=True, context={'request': request})
+        return Response(serializer.data)
+
+class UpdateAgreementView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, agreement_id):
+        agreement = get_object_or_404(Agreement, id=agreement_id)
+        signed_document = request.FILES.get('signed_document')
+        status = request.data.get('status')
+
+        if signed_document:
+            agreement.signed_document = signed_document
+        if status:
+            agreement.status = status
+            if status == 'Signed':
+                agreement.signed_at = timezone.now()
+
+        agreement.save()
+        serializer = AgreementSerializer(agreement, context={'request': request})
+        return Response(serializer.data)

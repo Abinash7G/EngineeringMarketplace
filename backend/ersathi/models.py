@@ -397,7 +397,7 @@ class Inquiry(models.Model):
     cost_estimation = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
     status = models.CharField(
         max_length=20,
-        choices=[('Pending', 'Pending'), ('Scheduled', 'Scheduled'), ('Completed', 'Completed')],
+        choices=[('Pending', 'Pending'), ('Scheduled', 'Scheduled'), ('Completed', 'Completed'), ('No-Show', 'No-Show'),],
         default='Pending'
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -486,3 +486,30 @@ class PaymentDistribution(models.Model):
     def __str__(self):
         return f"Payment of Rs. {self.amount} to {self.company.company_name} for Order {self.order.id}"
 
+
+
+
+
+# models.py
+from django.db import models
+from django.conf import settings
+
+class Agreement(models.Model):
+    inquiry = models.ForeignKey('Inquiry', on_delete=models.CASCADE, related_name='agreements')
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='agreements')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='agreements')
+    service = models.ForeignKey('Service', on_delete=models.CASCADE)
+    company_representative_name = models.CharField(max_length=100, blank=True, null=True)  # Manual input for company rep name
+    service_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Service charge in NPR
+    document = models.FileField(upload_to='agreements/', blank=True, null=True)  # Generated agreement PDF
+    signed_document = models.FileField(upload_to='signed_agreements/', blank=True, null=True)  # Signed agreement uploaded by client/company
+    status = models.CharField(
+        max_length=20,
+        choices=[('Draft', 'Draft'), ('Sent', 'Sent'), ('Signed', 'Signed'), ('Rejected', 'Rejected')],
+        default='Draft'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    signed_at = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Agreement for {self.inquiry.full_name} - {self.service.name}"
