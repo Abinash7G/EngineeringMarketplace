@@ -7,8 +7,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from ersathi import views
 from ersathi.views import (
     CheckNewInquiriesView,
+    ClientAgreementsView,
+    CompanyAgreementsView,
     CompanyAppointmentsView,
     CompanyInquiriesView,
+    DeleteAppointmentView,
     GetLastInquiryCheckView,
     MarkInquiriesCheckedView,
     RentVerificationAdminView,
@@ -17,7 +20,9 @@ from ersathi.views import (
     RentVerificationUserUpdateView,
     SubmitInquiryView,
     Test,
+    UpdateAgreementView,
     UpdateAppointmentStatusView,
+    UpdateAppointmentView,
     UpdateInquiryStatusView,
     
 
@@ -28,6 +33,8 @@ from ersathi.views import (
     delete_company_service,
     delete_project,
     delete_team_member,
+    generate_agreement,
+   
     get_company_info,
     get_company_projects,
     
@@ -38,6 +45,7 @@ from ersathi.views import (
     get_company_team_members,
     get_user_profile,
     project_list_create,
+   
     team_member_list_create,
     
     update_company_service,
@@ -66,6 +74,7 @@ from ersathi.views import (
     get_wishlist,
     add_to_wishlist,
     remove_from_wishlist,
+   
   
    
    
@@ -121,8 +130,16 @@ urlpatterns = [
     path('check-new-company-inquiries/', CheckNewInquiriesView.as_view(), name='check-new-inquiries'),
     path('api/get-last-inquiry-check/', GetLastInquiryCheckView.as_view(), name='get-last-inquiry-check'),
     path('appointments/<int:appointment_id>/update-status/', UpdateAppointmentStatusView.as_view(), name='update-appointment-status'),
+    path('api/appointments/<int:appointment_id>/update/', UpdateAppointmentView.as_view(), name='update-appointment'),
+    path('api/appointments/<int:appointment_id>/delete/', DeleteAppointmentView.as_view(), name='delete-appointment'),
    # path('api/submit-inquiry/<int:company_id>/', SubmitInquiryView.as_view(), name='submit-inquiry'),
    # path('api/company-inquiries/', CompanyInquiriesView.as_view(), name='company-inquiries'),
+   #aggrement
+   path('generate-agreement/<int:appointment_id>/', generate_agreement, name='generate_agreement'),
+   path('company-agreements/', CompanyAgreementsView.as_view(), name='company_agreements'),
+    path('client-agreements/', ClientAgreementsView.as_view(), name='client_agreements'),
+    path('api/agreements/<int:agreement_id>/update/', UpdateAgreementView.as_view(), name='update_agreement'),
+    
     # Services
     path('api/company-services/get/', get_company_services, name='get_company_services'),
     path('api/company-services/create/', create_company_service, name='create_company_service'),
