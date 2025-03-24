@@ -1,58 +1,35 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
-import { FaTools } from "react-icons/fa";
 import {
-  Box,
   AppBar,
   Toolbar,
   Typography,
   Button,
+  Box,
   InputBase,
   IconButton,
-  Menu,
-  MenuItem,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 
 const Navbar = () => {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const dropdownVisible = Boolean(anchorEl);
-
-  const handleDropdownOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleDropdownClose = () => {
-    setAnchorEl(null);
-  };
-
-  console.log("Navbar component rendered");
-  console.log("Dropdown visibility:", dropdownVisible);
-  console.log("Anchor element:", anchorEl);
-
-  const navLinkStyles = {
-    color: "white",
-    textDecoration: "none",
-    textTransform: "none",
-    fontWeight: "bold",
-    "&:hover": {
-      textDecoration: "underline",
-    },
-  };
-
-  const dropdownStyles = {
-    textDecoration: "none",
-    color: "#007BFF",
-    fontWeight: "normal",
-    "&:hover": {
-      backgroundColor: "rgba(0, 123, 255, 0.1)",
-    },
-  };
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
-    <AppBar position="static" sx={{ backgroundColor: "#007BFF" }}>
-      <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-        {/* Logo */}
+    <AppBar position="static" sx={{ backgroundColor: "#007BFF", boxShadow: "none" }}>
+      <Toolbar
+        sx={{
+          width: "100%",
+          margin: 0,
+          padding: 0, // Remove all padding to make elements flush
+          minHeight: "48px",
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
+        {/* Logo - Totally Left */}
         <Typography
           variant="h6"
           component={Link}
@@ -61,136 +38,122 @@ const Navbar = () => {
             color: "white",
             textDecoration: "none",
             fontWeight: "bold",
+            fontSize: { xs: "1rem", sm: "1.25rem" },
+            marginLeft: "0px", // Ensure no margin on the left
+            paddingLeft: "10px", // Small padding for slight breathing room
           }}
         >
           ERsathii
         </Typography>
 
-        {/* Center Menu */}
-        <Box sx={{ display: "flex", gap: 3, alignItems: "center" }}>
-          <Button component={Link} to="/" sx={navLinkStyles}>
-            Home
-          </Button>
-          <Button
-            onClick={handleDropdownOpen}
-            endIcon={<FaTools />}
-            sx={navLinkStyles}
-          >
-            Services
-          </Button>
-          <Menu
-            anchorEl={anchorEl}
-            open={dropdownVisible}
-            onClose={handleDropdownClose}
-            MenuListProps={{
-              onMouseLeave: handleDropdownClose,
-            }}
-            sx={{
-              mt: 2,
-              "& .MuiPaper-root": {
-                borderRadius: 2,
-                boxShadow: "0 2px 5px rgba(0, 0, 0, 0.2)",
-              },
-            }}
-          >
-            <MenuItem
+        {/* Center Menu - Hidden on mobile */}
+        {!isMobile && (
+          <Box sx={{ display: "flex", gap: { xs: 3, sm: 5 }, alignItems: "center", position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
+            <Button
               component={Link}
-              to="/survey-instrument"
-              onClick={handleDropdownClose}
-              sx={dropdownStyles}
+              to="/"
+              sx={{
+                color: "white",
+                textTransform: "none",
+                fontSize: "0.9rem",
+                padding: "4px 8px",
+                "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.1)" },
+              }}
             >
-              Survey Instrument Rentals
-            </MenuItem>
-            <MenuItem
+              Home
+            </Button>
+            <Button
               component={Link}
-              to="/engineering-consulting"
-              onClick={handleDropdownClose}
-              sx={dropdownStyles}
+              to="/about"
+              sx={{
+                color: "white",
+                textTransform: "none",
+                fontSize: "0.9rem",
+                padding: "4px 8px",
+                "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.1)" },
+              }}
             >
-              Engineering Consulting
-            </MenuItem>
-            <MenuItem
-              component={Link}
-              to="/building-construction"
-              onClick={handleDropdownClose}
-              sx={dropdownStyles}
-            >
-              Building Construction
-            </MenuItem>
-            <MenuItem
-              component={Link}
-              to="/post-maintenance"
-              onClick={handleDropdownClose}
-              sx={dropdownStyles}
-            >
-              Post-Construction Maintenance
-            </MenuItem>
-            <MenuItem
-              component={Link}
-              to="/material-marketplace"
-              onClick={handleDropdownClose}
-              sx={dropdownStyles}
-            >
-              Material Marketplace
-            </MenuItem>
-          </Menu>
-          <Button component={Link} to="/about" sx={navLinkStyles}>
-            About Us
-          </Button>
-          <Button component={Link} to="/contact" sx={navLinkStyles}>
-            Contact
-          </Button>
-        </Box>
+              About Us
+            </Button>
+          </Box>
+        )}
 
-        {/* Right Section */}
-        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+        {/* Right Section - Totally Right */}
+        <Box
+          sx={{
+            display: "flex",
+            gap: { xs: 1, sm: 2.5 },
+            alignItems: "center",
+            flexWrap: "wrap",
+            marginRight: "0px", // Ensure no margin on the right
+            paddingRight: "10px", // Small padding for slight breathing room
+          }}
+        >
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
               backgroundColor: "white",
-              padding: "2px 10px",
-              borderRadius: "5px",
+              padding: "4px 8px",
+              borderRadius: "20px",
+              boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
             }}
           >
             <IconButton size="small" sx={{ padding: 0 }}>
-              <SearchIcon />
+              <SearchIcon sx={{ color: "#007BFF", fontSize: "1.2rem" }} />
             </IconButton>
             <InputBase
               placeholder="Search..."
               sx={{
-                ml: 1,
-                fontSize: "1rem",
-                width: "150px",
+                ml: 0.5,
+                fontSize: "0.85rem",
+                width: { xs: "60px", sm: "80px" },
+                color: "#555",
               }}
             />
           </Box>
-          <Button
-            component={Link}
-            to="/signup"
-            variant="contained"
-            color="primary"
-            sx={{ textTransform: "none" }}
-          >
-            Signup
-          </Button>
-          <Button
-            component={Link}
-            to="/login"
-            variant="outlined"
-            color="inherit"
-            sx={{ textTransform: "none" }}
-          >
-            Login
-          </Button>
+          {!isMobile && (
+            <>
+              <Button
+                component={Link}
+                to="/signup"
+                sx={{
+                  color: "white",
+                  textTransform: "none",
+                  fontSize: "0.85rem",
+                  padding: "4px 12px",
+                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.1)" },
+                }}
+              >
+                Sign Up
+              </Button>
+              <Button
+                component={Link}
+                to="/login"
+                sx={{
+                  color: "white",
+                  textTransform: "none",
+                  fontSize: "0.85rem",
+                  padding: "4px 12px",
+                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.1)" },
+                }}
+              >
+                Login
+              </Button>
+            </>
+          )}
           <Button
             component={Link}
             to="/companyregistration"
             variant="contained"
-            color="warning"
             sx={{
+              backgroundColor: "#ff8c00",
+              color: "white",
               textTransform: "none",
-              fontWeight: "bold",
+              padding: { xs: "4px 8px", sm: "4px 12px" },
+              borderRadius: "20px",
+              fontSize: { xs: "0.75rem", sm: "0.85rem" },
+              "&:hover": { backgroundColor: "#ff4500" },
             }}
           >
             Register as Company
