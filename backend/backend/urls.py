@@ -136,9 +136,10 @@ urlpatterns = [
    # path('api/company-inquiries/', CompanyInquiriesView.as_view(), name='company-inquiries'),
    #aggrement
    path('generate-agreement/<int:appointment_id>/', generate_agreement, name='generate_agreement'),
+#  path('company-agreements/<int:user_id>/', CompanyAgreementsView.as_view(), name='company_agreements'),
    path('company-agreements/', CompanyAgreementsView.as_view(), name='company_agreements'),
-    path('client-agreements/', ClientAgreementsView.as_view(), name='client_agreements'),
-    path('api/agreements/<int:agreement_id>/update/', UpdateAgreementView.as_view(), name='update_agreement'),
+   path('client-agreements/', ClientAgreementsView.as_view(), name='client_agreements'),
+   path('api/agreements/<int:agreement_id>/update/', UpdateAgreementView.as_view(), name='update_agreement'),
     
     # Services
     path('api/company-services/get/', get_company_services, name='get_company_services'),
