@@ -24,6 +24,7 @@ from ersathi.views import (
     UpdateAppointmentStatusView,
     UpdateAppointmentView,
     UpdateInquiryStatusView,
+    UpdateOrderPaymentView,
     
 
     company_info,
@@ -172,7 +173,7 @@ urlpatterns = [
     path('api/orders/create/', views.create_order, name='create_order'),
     path('api/orders/', views.get_orders, name='get_orders'),
     path('api/company/orders/', views.get_company_orders, name='get_company_orders'),
-
+    path("api/orders/update-payment/", UpdateOrderPaymentView.as_view(), name="update-order-payment"),
     # Payment
     path('api/verify-khalti-payment/', verify_khalti_payment, name='verify_khalti_payment'),
     path('api/verify-esewa-payment/', views.verify_esewa_payment, name='verify_esewa_payment'),

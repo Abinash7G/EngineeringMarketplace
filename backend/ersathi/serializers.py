@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Service, Company, Product
+from .models import BuildingConstructionData, EngineeringConsultingData, PostConstructionMaintenanceData, SafetyTrainingData, Service, Company, Product
 
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -162,30 +162,97 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
 
 
 # serializers.py
+# from rest_framework import serializers
+# from .models import Inquiry, Appointment, Company
+# class AppointmentSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Appointment
+#         fields = ['id', 'appointment_date']
+# class InquirySerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Inquiry
+#         fields = ['id', 'full_name', 'location', 'email', 'phone_number', 'category', 'sub_service', 'status', 'created_at']
+
+# class EngineeringConsultingDataSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = EngineeringConsultingData
+#         fields = '__all__'
+
+# class BuildingConstructionDataSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = BuildingConstructionData
+#         fields = '__all__'
+
+# class PostConstructionMaintenanceDataSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = PostConstructionMaintenanceData
+#         fields = '__all__'
+
+# class SafetyTrainingDataSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = SafetyTrainingData
+#         fields = '__all__'
+
+# class AppointmentSerializer(serializers.ModelSerializer):
+#     inquiry = InquirySerializer(read_only=True)
+#     company = serializers.CharField(source='company.company_name', read_only=True)
+    
+#     class Meta:
+#         model = Appointment
+#         fields = ['id', 'inquiry', 'company', 'appointment_date', 'duration_minutes', 'status', 'created_at']
+# serializers.py
 from rest_framework import serializers
-from .models import Inquiry, Appointment, Company
+from .models import Inquiry, Appointment, Company, EngineeringConsultingData, BuildingConstructionData, PostConstructionMaintenanceData, SafetyTrainingData
+
 class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = ['id', 'appointment_date']
 
+class EngineeringConsultingDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EngineeringConsultingData
+        fields = '__all__'
+
+class BuildingConstructionDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BuildingConstructionData
+        fields = '__all__'
+
+class PostConstructionMaintenanceDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostConstructionMaintenanceData
+        fields = '__all__'
+
+class SafetyTrainingDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SafetyTrainingData
+        fields = '__all__'
+
 class InquirySerializer(serializers.ModelSerializer):
+    # Add a field to dynamically include service-specific data
+    service_data = serializers.SerializerMethodField()
+
     class Meta:
         model = Inquiry
-        fields = [
-            'id', 'full_name', 'location', 'email', 'phone_number', 'category', 'sub_service',
-            'type_of_building', 'building_purpose', 'num_floors', 'land_area',
-            'architectural_style', 'architectural_style_other', 'budget_estimate',
-            'special_requirements', 'status', 'created_at',
-            'site_plan', 'architectural_plan', 'soil_test_report', 'foundation_design',
-            'electrical_plan', 'plumbing_plan', 'hvac_plan', 'construction_permit', 'cost_estimation'
-        ]
+        fields = ['id', 'full_name', 'location', 'email', 'phone_number', 'category', 'sub_service', 'status', 'created_at', 'service_data']
 
-# serializers.py
+    def get_service_data(self, obj):
+        # Dynamically fetch the related service-specific data based on the category
+        if obj.category == "Engineering Consulting" and hasattr(obj, 'engineering_data'):
+            return EngineeringConsultingDataSerializer(obj.engineering_data).data
+        elif obj.category == "Building Construction Services" and hasattr(obj, 'building_data'):
+            return BuildingConstructionDataSerializer(obj.building_data).data
+        elif obj.category == "Post-Construction Maintenance" and hasattr(obj, 'maintenance_data'):
+            return PostConstructionMaintenanceDataSerializer(obj.maintenance_data).data
+        elif obj.category == "Safety and Training Services" and hasattr(obj, 'training_data'):
+            return SafetyTrainingDataSerializer(obj.training_data).data
+        return None
+
 class AppointmentSerializer(serializers.ModelSerializer):
     inquiry = InquirySerializer(read_only=True)
     company = serializers.CharField(source='company.company_name', read_only=True)
-
+    
     class Meta:
         model = Appointment
         fields = ['id', 'inquiry', 'company', 'appointment_date', 'duration_minutes', 'status', 'created_at']
@@ -193,8 +260,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
 
 
-##order
-# backend/serializers.py
+##order# backend/serializers.py
 from rest_framework import serializers
 from .models import Order, OrderItem
 
@@ -208,43 +274,8 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     class Meta:
         model = Order
-        fields = ['id', 'order_type', 'items', 'total_amount', 'renting_details', 'billing_details', 'status', 'created_at']
-
-
-
-# serializers.py
-# from rest_framework import serializers
-# from .models import Agreement
-
-# class AgreementSerializer(serializers.ModelSerializer):
-#     inquiry = serializers.StringRelatedField()
-#     service = serializers.StringRelatedField()
-#     document = serializers.FileField()
-#     signed_document = serializers.FileField()
-
-#     class Meta:
-#         model = Agreement
-#         fields = ['id', 'inquiry', 'service', 'status', 'created_at', 'document', 'signed_document']# serializers.py
-# from rest_framework import serializers
-# from .models import Agreement
-
-# class AgreementSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Agreement
-#         fields = ['id', 'inquiry', 'company', 'user', 'service', 'company_representative_name', 'service_charge', 'document', 'signed_document', 'status', 'created_at', 'signed_at']
-#         read_only_fields = ['created_at', 'signed_at']
-
-#     def to_representation(self, instance):
-#         representation = super().to_representation(instance)
-#         # Include full URLs for document and signed_document
-#         if instance.document:
-#             representation['document'] = instance.document.url
-#         if instance.signed_document:
-#             representation['signed_document'] = instance.signed_document.url
-#         # Include nested fields for inquiry and service
-#         representation['inquiry'] = {'full_name': instance.inquiry.full_name}
-#         representation['service'] = {'name': instance.service.name}
-#         return representation
+        fields = ['id', 'order_type', 'items', 'total_amount', 'renting_details', 'billing_details', 'status', 'created_at', 'booking_id']
+#aggrement
 from rest_framework import serializers
 from .models import Agreement
 

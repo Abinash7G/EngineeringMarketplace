@@ -365,6 +365,46 @@ class Transaction(models.Model):
         print("Transaction saved successfully.")
 
 """""
+# # models.py
+# from django.db import models
+# from django.conf import settings
+
+# class Inquiry(models.Model):
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='inquiries')
+#     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='inquiries', db_column='company_id')
+#     full_name = models.CharField(max_length=100)
+#     location = models.CharField(max_length=200)
+#     email = models.EmailField()
+#     phone_number = models.CharField(max_length=20)
+#     category = models.CharField(max_length=100)
+#     sub_service = models.CharField(max_length=100)
+#     type_of_building = models.CharField(max_length=50, blank=True, null=True)
+#     building_purpose = models.CharField(max_length=200, blank=True, null=True)
+#     num_floors = models.PositiveIntegerField(blank=True, null=True)
+#     land_area = models.CharField(max_length=50, blank=True, null=True)
+#     architectural_style = models.CharField(max_length=100, blank=True, null=True)
+#     architectural_style_other = models.CharField(max_length=100, blank=True, null=True)
+#     budget_estimate = models.CharField(max_length=50, blank=True, null=True)
+#     special_requirements = models.TextField(blank=True, null=True)
+#     site_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+#     architectural_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+#     soil_test_report = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+#     foundation_design = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+#     electrical_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+#     plumbing_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+#     hvac_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+#     construction_permit = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+#     cost_estimation = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
+#     status = models.CharField(
+#         max_length=20,
+#         choices=[('Pending', 'Pending'), ('Scheduled', 'Scheduled'), ('Completed', 'Completed'), ('No-Show', 'No-Show'),],
+#         default='Pending'
+#     )
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return f"{self.full_name} - {self.company.company_name}"
+
 # models.py
 from django.db import models
 from django.conf import settings
@@ -378,6 +418,26 @@ class Inquiry(models.Model):
     phone_number = models.CharField(max_length=20)
     category = models.CharField(max_length=100)
     sub_service = models.CharField(max_length=100)
+    status = models.CharField(
+        max_length=20,
+        choices=[('Pending', 'Pending'), ('Scheduled', 'Scheduled'), ('Completed', 'Completed'), ('No-Show', 'No-Show')],
+        default='Pending'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.full_name} - {self.company.company_name}"
+
+# Base model for service-specific form data
+class ServiceFormData(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        abstract = True  # This makes it a base class that won't create a table itself
+
+# Engineering Consulting Form Data
+class EngineeringConsultingData(ServiceFormData):
+    inquiry = models.OneToOneField(Inquiry, on_delete=models.CASCADE, related_name='engineering_data')
     type_of_building = models.CharField(max_length=50, blank=True, null=True)
     building_purpose = models.CharField(max_length=200, blank=True, null=True)
     num_floors = models.PositiveIntegerField(blank=True, null=True)
@@ -386,24 +446,70 @@ class Inquiry(models.Model):
     architectural_style_other = models.CharField(max_length=100, blank=True, null=True)
     budget_estimate = models.CharField(max_length=50, blank=True, null=True)
     special_requirements = models.TextField(blank=True, null=True)
-    site_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
-    architectural_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
-    soil_test_report = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
-    foundation_design = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
-    electrical_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
-    plumbing_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
-    hvac_plan = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
-    construction_permit = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
-    cost_estimation = models.FileField(upload_to='inquiry_files/', blank=True, null=True)
-    status = models.CharField(
-        max_length=20,
-        choices=[('Pending', 'Pending'), ('Scheduled', 'Scheduled'), ('Completed', 'Completed'), ('No-Show', 'No-Show'),],
-        default='Pending'
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
+    site_plan = models.FileField(upload_to='inquiry_files/engineering/', blank=True, null=True)
+    architectural_plan = models.FileField(upload_to='inquiry_files/engineering/', blank=True, null=True)
+    soil_test_report = models.FileField(upload_to='inquiry_files/engineering/', blank=True, null=True)
+    foundation_design = models.FileField(upload_to='inquiry_files/engineering/', blank=True, null=True)
+    electrical_plan = models.FileField(upload_to='inquiry_files/engineering/', blank=True, null=True)
+    plumbing_plan = models.FileField(upload_to='inquiry_files/engineering/', blank=True, null=True)
+    hvac_plan = models.FileField(upload_to='inquiry_files/engineering/', blank=True, null=True)
+    construction_permit = models.FileField(upload_to='inquiry_files/engineering/', blank=True, null=True)
+    cost_estimation = models.FileField(upload_to='inquiry_files/engineering/', blank=True, null=True)
 
-    def __str__(self):
-        return f"{self.full_name} - {self.company.company_name}"
+# Building Construction Form Data
+class BuildingConstructionData(ServiceFormData):
+    inquiry = models.OneToOneField(Inquiry, on_delete=models.CASCADE, related_name='building_data')
+    # Common fields
+    lalpurja = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    napi_naksa = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    tax_clearance = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    approved_building_drawings = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    
+    # Residential fields
+    soil_test_report = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    structural_stability_certificate = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    house_design_approval = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    neighbour_consent = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    
+    # Commercial fields
+    iee_report = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    fire_safety_certificate = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    lift_permit = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    parking_layout_plan = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    commercial_special_requirements = models.TextField(blank=True, null=True)
+    
+    # Renovation fields
+    type_of_building = models.CharField(max_length=50, blank=True, null=True)
+    existing_building_details = models.TextField(blank=True, null=True)
+    owner_permission_letter = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    existing_structure_analysis = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    renovation_plan = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    noc_municipality = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    waste_management_plan = models.FileField(upload_to='inquiry_files/building/', blank=True, null=True)
+    area_to_renovate = models.CharField(max_length=50, blank=True, null=True)
+    budget_estimate = models.CharField(max_length=50, blank=True, null=True)
+    renovation_special_requirements = models.TextField(blank=True, null=True)
+
+# Post Construction Maintenance Form Data
+class PostConstructionMaintenanceData(ServiceFormData):
+    inquiry = models.OneToOneField(Inquiry, on_delete=models.CASCADE, related_name='maintenance_data')
+    maintenance_type = models.CharField(max_length=100, blank=True, null=True)
+    maintenance_details = models.TextField(blank=True, null=True)
+    maintenance_photos = models.FileField(upload_to='inquiry_files/maintenance/', blank=True, null=True)
+    preferred_date = models.DateField(blank=True, null=True)
+    preferred_time = models.CharField(max_length=50, blank=True, null=True)
+    payment_agreed = models.BooleanField(default=False)
+
+# Safety Training Form Data
+class SafetyTrainingData(ServiceFormData):
+    inquiry = models.OneToOneField(Inquiry, on_delete=models.CASCADE, related_name='training_data')
+    language_preference = models.CharField(max_length=50, blank=True, null=True)
+    language_preference_other = models.CharField(max_length=100, blank=True, null=True)
+    training_date = models.DateField(blank=True, null=True)
+    training_time = models.CharField(max_length=50, blank=True, null=True)
+    training_agreement = models.BooleanField(default=False)
+
+
 
 
 # Signal to send WebSocket notification on new inquiry
@@ -462,6 +568,7 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    booking_id = models.CharField(max_length=255, null=True, blank=True)  # Add this field
     def __str__(self):
         return f"Order {self.id} - {self.order_type} for {self.company.company_name}"
 
