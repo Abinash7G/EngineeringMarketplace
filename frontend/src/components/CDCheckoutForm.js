@@ -1,4 +1,3 @@
-// // src/components/CDCheckoutForm.jsx
 // import React, { useState, useEffect } from "react";
 // import {
 //   Box,
@@ -11,14 +10,22 @@
 //   Step,
 //   StepLabel,
 //   Alert,
-//   FormHelperText,
 //   Checkbox,
 //   FormControlLabel,
+//   Radio,
+//   RadioGroup,
+//   FormControl,
+//   FormLabel,
 // } from "@mui/material";
 // import { ArrowBack } from "@mui/icons-material";
 // import { useNavigate } from "react-router-dom";
 // import API from "../services/api";
-// import KhaltiPayments from "./KhaltiButton";
+// import CryptoJS from "crypto-js";
+// import ReCAPTCHA from "react-google-recaptcha";
+// import { v4 as uuidv4 } from "uuid";
+// import KhaltiPayments from "./KhaltiButton"; // Ensure path is correct
+// // import esewaIcon from "../assets/esewa-icon.png"; // Adjust path to your eSewa icon
+// // import khaltiIcon from "../assets/khalti-icon.png"; // Adjust path to your Khalti icon
 
 // const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal }) => {
 //   const navigate = useNavigate();
@@ -43,17 +50,23 @@
 //     dateNeeded: false,
 //   });
 
-//   const [totalPrice, setTotalPrice] = useState(cartTotal);
+//   const [totalPrice, setTotalPrice] = useState(cartTotal || 0);
 //   const [rentingPrice, setRentingPrice] = useState(0);
+//   const [transactionUuid, setTransactionUuid] = useState("");
+//   const [recaptchaToken, setRecaptchaToken] = useState("");
+//   const [bookingId, setBookingId] = useState("");
+//   const [paymentMethod, setPaymentMethod] = useState("esewa");
 
 //   useEffect(() => {
 //     if (rentingItems.length > 0) {
 //       const defaultRentingPrice = rentingItems.reduce(
-//         (total, item) => total + item.price * formData.rentingDays,
+//         (total, item) => total + (parseFloat(item.price) || 0) * formData.rentingDays,
 //         0
 //       );
 //       setRentingPrice(defaultRentingPrice);
-//       setTotalPrice(cartTotal + defaultRentingPrice);
+//       setTotalPrice((cartTotal || 0) + defaultRentingPrice);
+//     } else {
+//       setTotalPrice(cartTotal || 0);
 //     }
 
 //     const fetchData = async () => {
@@ -81,6 +94,11 @@
 //       }
 //     };
 
+//     const generateBookingId = () => {
+//       return `BID-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+//     };
+//     setBookingId(generateBookingId());
+
 //     fetchData();
 //   }, [cartTotal, rentingItems, formData.rentingDays]);
 
@@ -89,11 +107,11 @@
 //     setFormData({ ...formData, rentingDays: days });
 //     setErrors({ ...errors, rentingDays: days <= 0 });
 //     const newRentingPrice = rentingItems.reduce(
-//       (total, item) => total + item.price * days,
+//       (total, item) => total + (parseFloat(item.price) || 0) * days,
 //       0
 //     );
 //     setRentingPrice(newRentingPrice);
-//     setTotalPrice(cartTotal + newRentingPrice);
+//     setTotalPrice((cartTotal || 0) + newRentingPrice);
 //   };
 
 //   const handleInputChange = (e) => {
@@ -103,6 +121,16 @@
 
 //   const handleCheckboxChange = (e) => {
 //     setFormData({ ...formData, payNow: e.target.checked });
+//   };
+
+//   const handleRecaptchaChange = (token) => {
+//     setRecaptchaToken(token);
+//     console.log("reCAPTCHA Token Captured:", token);
+//   };
+
+//   const handlePaymentMethodChange = (event) => {
+//     setPaymentMethod(event.target.value);
+//     setRecaptchaToken(""); // Reset reCAPTCHA token when switching methods
 //   };
 
 //   const steps = rentingItems.length > 0 ? ["Verification Check", "Details", "Payment"] : ["Details", "Payment"];
@@ -140,6 +168,133 @@
 //     setActiveStep((prev) => prev - 1);
 //   };
 
+//   const handleCreateOrder = async () => {
+//     try {
+//       if (!buyingItems.length && !rentingItems.length) {
+//         throw new Error("At least one buying or renting item is required");
+//       }
+
+//       const payload = {
+//         user_id: localStorage.getItem("user_id"),
+//         buying_items: buyingItems.map((item) => ({
+//           product_id: item.product_id,
+//           name: item.name,
+//           quantity: parseInt(item.quantity, 10),
+//           price: parseFloat(item.price),
+//           company_id: item.company || item.company_id || 1,
+//         })),
+//         renting_items: rentingItems.map((item) => ({
+//           product_id: item.product_id,
+//           name: item.name,
+//           quantity: parseInt(item.quantity, 10),
+//           price: parseFloat(item.price),
+//           company_id: item.company || item.company_id || 1,
+//         })),
+//         billing_details: buyingItems.length > 0 ? {
+//           fullName: userDetails.fullName || "",
+//           email: userDetails.email || "",
+//           contactNumber: userDetails.contactNumber || "",
+//           deliveryLocation: formData.deliveryLocation || "",
+//         } : null,
+//         renting_details: rentingItems.length > 0 ? {
+//           name: userDetails.fullName || "",
+//           contactNumber: userDetails.contactNumber || "",
+//           surveyType: formData.surveyType || "",
+//           rentingDays: parseInt(formData.rentingDays, 10) || 1,
+//           dateNeeded: formData.dateNeeded || "",
+//         } : null,
+//         bookingId: bookingId,
+//         transaction_uuid: uuidv4(),
+//       };
+
+//       console.log("Sending payload to create order:", payload);
+//       const response = await API.post("/api/orders/create/", payload);
+//       console.log("Order Creation Response:", response.data);
+//       setTransactionUuid(response.data.transaction_uuid);
+//       return response.data.transaction_uuid;
+//     } catch (error) {
+//       console.error("Error creating order:", error.response ? error.response.data : error.message);
+//       alert(`Failed to create order: ${error.response ? error.response.data.error : error.message}`);
+//       throw error;
+//     }
+//   };
+
+//   const handleEsewaPayment = async () => {
+//     try {
+//       if (!recaptchaToken) {
+//         throw new Error("Please complete the reCAPTCHA challenge.");
+//       }
+
+//       setTransactionUuid("");
+//       const transaction_uuid = await handleCreateOrder();
+//       if (!transaction_uuid) {
+//         throw new Error("Transaction UUID is missing");
+//       }
+
+//       const productCode = process.env.REACT_APP_ESEWA_PRODUCT_CODE || "EPAYTEST";
+//       const formattedTotalPrice = Number(totalPrice).toFixed(2);
+
+//       const dataString = `total_amount=${formattedTotalPrice},transaction_uuid=${transaction_uuid},product_code=${productCode}`;
+//       console.log("Debug Data String:", dataString);
+
+//       const esewaFormData = {
+//         amount: formattedTotalPrice,
+//         tax_amount: "0.00",
+//         total_amount: formattedTotalPrice,
+//         transaction_uuid: transaction_uuid,
+//         product_code: productCode,
+//         product_service_charge: "0.00",
+//         product_delivery_charge: "0.00",
+//         success_url: process.env.REACT_APP_SUCCESS_URL || "http://localhost:3000/success",
+//         failure_url: process.env.REACT_APP_FAILURE_URL || "http://localhost:3000/failure",
+//         signed_field_names: "total_amount,transaction_uuid,product_code",
+//         "g-recaptcha-response": recaptchaToken,
+//         bookingId: bookingId,
+//         signature: "",
+//       };
+
+//       const secretKey = process.env.REACT_APP_ESEWA_SECRET_KEY || "8gBm/:&EnhH.1/q";
+//       const hash = CryptoJS.HmacSHA256(dataString, secretKey);
+//       esewaFormData.signature = CryptoJS.enc.Base64.stringify(hash);
+
+//       console.log("Esewa Form Data:", esewaFormData);
+
+//       const form = document.createElement("form");
+//       form.method = "POST";
+//       form.action = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
+//       form.target = "_blank";
+
+//       Object.entries(esewaFormData).forEach(([key, value]) => {
+//         const input = document.createElement("input");
+//         input.type = "hidden";
+//         input.name = key;
+//         input.value = value;
+//         form.appendChild(input);
+//       });
+
+//       document.body.appendChild(form);
+//       form.submit();
+//       document.body.removeChild(form);
+//     } catch (error) {
+//       console.error("Error initiating eSewa payment:", error.message);
+//       alert("Failed to initiate payment. Please complete reCAPTCHA or check the console for details.");
+//     }
+//   };
+
+//   const handleKhaltiPayment = async () => {
+//     try {
+//       const transaction_uuid = await handleCreateOrder();
+//       if (!transaction_uuid) {
+//         throw new Error("Transaction UUID is missing");
+//       }
+//       return transaction_uuid;
+//     } catch (error) {
+//       console.error("Error initiating Khalti payment:", error);
+//       alert("Failed to initiate Khalti payment. Please try again.");
+//       throw error;
+//     }
+//   };
+
 //   const handlePaymentSuccess = async (paymentData) => {
 //     try {
 //       const payload = {
@@ -147,31 +302,32 @@
 //         buying_items: buyingItems.map((item) => ({
 //           product_id: item.product_id,
 //           name: item.name,
-//           quantity: item.quantity,
-//           price: item.price,
-//           company_id: item.company_id || 1,
+//           quantity: parseInt(item.quantity, 10),
+//           price: parseFloat(item.price),
+//           company_id: item.company || item.company_id || 1,
 //         })),
 //         renting_items: rentingItems.map((item) => ({
 //           product_id: item.product_id,
 //           name: item.name,
-//           quantity: item.quantity,
-//           price: item.price,
-//           company_id: item.company_id || 1,
+//           quantity: parseInt(item.quantity, 10),
+//           price: parseFloat(item.price),
+//           company_id: item.company || item.company_id || 1,
 //         })),
 //         billing_details: buyingItems.length > 0 ? {
-//           fullName: userDetails.fullName,
-//           email: userDetails.email,
-//           contactNumber: userDetails.contactNumber,
-//           deliveryLocation: formData.deliveryLocation,
+//           fullName: userDetails.fullName || "",
+//           email: userDetails.email || "",
+//           contactNumber: userDetails.contactNumber || "",
+//           deliveryLocation: formData.deliveryLocation || "",
 //         } : null,
 //         renting_details: rentingItems.length > 0 ? {
-//           name: userDetails.fullName,
-//           contactNumber: userDetails.contactNumber,
-//           surveyType: formData.surveyType,
-//           rentingDays: formData.rentingDays,
-//           dateNeeded: formData.dateNeeded,
+//           name: userDetails.fullName || "",
+//           contactNumber: userDetails.contactNumber || "",
+//           surveyType: formData.surveyType || "",
+//           rentingDays: parseInt(formData.rentingDays, 10) || 1,
+//           dateNeeded: formData.dateNeeded || "",
 //         } : null,
 //         payment_data: paymentData,
+//         bookingId: bookingId,
 //       };
 
 //       await API.post("/api/orders/create/", payload);
@@ -293,9 +449,66 @@
 //           <Typography variant="h6" sx={{ mt: 1, p: 2, bgcolor: "#f5f5f5", borderRadius: "4px" }}>
 //             Grand Total Price: Rs. {totalPrice}
 //           </Typography>
-//           <Box sx={{ mt: 2 }}>
-//             <KhaltiPayments totalPrice={totalPrice} onSuccess={handlePaymentSuccess} />
+//           <Box sx={{ mt: 2, mb: 2 }}>
+//             <FormControl component="fieldset">
+//               <FormLabel component="legend">Select Payment Method</FormLabel>
+//               <RadioGroup
+//                 row
+//                 value={paymentMethod}
+//                 onChange={handlePaymentMethodChange}
+//                 name="payment-method"
+//               >
+//                 <FormControlLabel
+//                   value="esewa"
+//                   control={<Radio />}
+//                   label={
+//                     <Box sx={{ display: "flex", alignItems: "center" }}>
+//                       {/* <img src={esewaIcon} alt="eSewa" style={{ width: 24, height: 24, marginRight: 8 }} /> */}
+//                       Pay with eSewa
+//                     </Box>
+//                   }
+//                 />
+//                 <FormControlLabel
+//                   value="khalti"
+//                   control={<Radio />}
+//                   label={
+//                     <Box sx={{ display: "flex", alignItems: "center" }}>
+//                       {/* <img src={khaltiIcon} alt="Khalti" style={{ width: 24, height: 24, marginRight: 8 }} /> */}
+//                       Pay with Khalti
+//                     </Box>
+//                   }
+//                 />
+//               </RadioGroup>
+//             </FormControl>
 //           </Box>
+//           {paymentMethod === "esewa" ? (
+//             <>
+//               <Box sx={{ mt: 2, mb: 2 }}>
+//                 <ReCAPTCHA
+//                   sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"}
+//                   onChange={handleRecaptchaChange}
+//                 />
+//               </Box>
+//               <Box sx={{ mt: 2 }}>
+//                 <Button
+//                   variant="contained"
+//                   color="primary"
+//                   onClick={handleEsewaPayment}
+//                   disabled={!recaptchaToken}
+//                 >
+//                   Pay with eSewa
+//                 </Button>
+//               </Box>
+//             </>
+//           ) : (
+//             <Box sx={{ mt: 2 }}>
+//               <KhaltiPayments
+//                 totalPrice={totalPrice}
+//                 transactionUuid={transactionUuid || handleKhaltiPayment()} // Trigger order creation if not already set
+//                 onSuccess={(paymentData) => handlePaymentSuccess({ ...paymentData, method: "khalti" })}
+//               />
+//             </Box>
+//           )}
 //         </Box>
 //       );
 //     }
@@ -327,17 +540,6 @@
 // };
 
 // export default CDCheckoutForm;
-
-// src/components/CDCheckoutForm.jsx
-
-
-// src/components/CDCheckoutForm.jsx// src/components/CDCheckoutForm.jsx
-
-
-// src/components/CDCheckoutForm.jsx
-
-// src/components/CDCheckoutForm.jsx
-
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -364,8 +566,6 @@ import CryptoJS from "crypto-js";
 import ReCAPTCHA from "react-google-recaptcha";
 import { v4 as uuidv4 } from "uuid";
 import KhaltiPayments from "./KhaltiButton"; // Ensure path is correct
-// import esewaIcon from "../assets/esewa-icon.png"; // Adjust path to your eSewa icon
-// import khaltiIcon from "../assets/khalti-icon.png"; // Adjust path to your Khalti icon
 
 const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal }) => {
   const navigate = useNavigate();
@@ -670,12 +870,18 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal }) => {
         bookingId: bookingId,
       };
 
-      await API.post("/api/orders/create/", payload);
+      // Since the order is already created in handleKhaltiPayment, you might not need to create it again
+      // Instead, you can update the order with the payment data if needed
+      await API.post("/api/orders/update-payment/", {
+        bookingId: bookingId,
+        payment_data: paymentData,
+      });
+
       alert("Order placed successfully! Check your orders.");
       navigate("/orders");
     } catch (error) {
-      console.error("Error creating order:", error);
-      alert("Failed to create order. Please try again.");
+      console.error("Error updating order with payment data:", error);
+      alert("Failed to update order with payment data. Please try again.");
     }
   };
 
@@ -803,7 +1009,6 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal }) => {
                   control={<Radio />}
                   label={
                     <Box sx={{ display: "flex", alignItems: "center" }}>
-                      {/* <img src={esewaIcon} alt="eSewa" style={{ width: 24, height: 24, marginRight: 8 }} /> */}
                       Pay with eSewa
                     </Box>
                   }
@@ -813,7 +1018,6 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal }) => {
                   control={<Radio />}
                   label={
                     <Box sx={{ display: "flex", alignItems: "center" }}>
-                      {/* <img src={khaltiIcon} alt="Khalti" style={{ width: 24, height: 24, marginRight: 8 }} /> */}
                       Pay with Khalti
                     </Box>
                   }
@@ -844,7 +1048,6 @@ const CDCheckoutForm = ({ buyingItems, rentingItems, cartTotal }) => {
             <Box sx={{ mt: 2 }}>
               <KhaltiPayments
                 totalPrice={totalPrice}
-                transactionUuid={transactionUuid || handleKhaltiPayment()} // Trigger order creation if not already set
                 onSuccess={(paymentData) => handlePaymentSuccess({ ...paymentData, method: "khalti" })}
               />
             </Box>
