@@ -1167,9 +1167,7 @@ class TransactionAPIView(APIView):
             return Response({"error": "Transaction not found"}, 
                           status=status.HTTP_404_NOT_FOUND)    
 '''''''''''''''''
-
-
-#Load API keys from .env fileimport os
+import os
 import json
 import requests
 from django.http import JsonResponse
@@ -1178,10 +1176,8 @@ from dotenv import load_dotenv
 
 # Load API keys from .env file
 load_dotenv()
-import os
 
 KHALTI_SECRET_KEY = os.getenv("KHALTI_SECRET_KEY", "test_secret_key_b6f287aab3874adf880ba3ef82f4471c")
-
 
 @csrf_exempt
 def verify_khalti_payment(request):
@@ -1216,6 +1212,54 @@ def verify_khalti_payment(request):
             return JsonResponse({"status": "failed", "message": "Invalid JSON data"}, status=400)
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
+##
+# #Load API keys from .env fileimport os
+# import json
+# import requests
+# from django.http import JsonResponse
+# from django.views.decorators.csrf import csrf_exempt
+# from dotenv import load_dotenv
+
+# # Load API keys from .env file
+# load_dotenv()
+# import os
+
+# KHALTI_SECRET_KEY = os.getenv("KHALTI_SECRET_KEY", "test_secret_key_b6f287aab3874adf880ba3ef82f4471c")
+
+
+# @csrf_exempt
+# def verify_khalti_payment(request):
+#     if request.method == "POST":
+#         try:
+#             data = json.loads(request.body)
+#             print("Received data:", data)  # Debug log
+#             token = data.get("token")
+#             amount = data.get("amount")  # Correct key
+
+#             if not token or not amount:
+#                 print("Missing token or amount:", {"token": token, "amount": amount})  # Debug log
+#                 return JsonResponse({"status": "failed", "message": "Missing token or amount"}, status=400)
+
+#             # Use test mode URL for Khalti
+#             url = "https://a.khalti.com/api/v2/payment/verify/"  # Test mode URL
+#             headers = {"Authorization": f"Key {KHALTI_SECRET_KEY}"}
+#             payload = {"token": token, "amount": amount}
+
+#             print("Sending to Khalti:", payload)  # Debug log
+#             response = requests.post(url, json=payload, headers=headers)
+#             response_data = response.json()
+#             print("Khalti Response:", response_data)  # Debug log
+
+#             if response.status_code == 200:
+#                 return JsonResponse({"status": "success", "message": "Payment Verified!", "data": response_data})
+#             else:
+#                 return JsonResponse({"status": "failed", "message": "Payment Verification Failed!", "data": response_data}, status=400)
+
+#         except json.JSONDecodeError as e:
+#             print("JSON Decode Error:", str(e))  # Debug log
+#             return JsonResponse({"status": "failed", "message": "Invalid JSON data"}, status=400)
+
+#     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)##
 # khalti payment
 # from django.http import JsonResponse
 # from django.views.decorators.csrf import csrf_exempt
@@ -1643,6 +1687,97 @@ def send_inquiry_notification(sender, instance, created, **kwargs):
             }
         )
 
+# class SubmitInquiryView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request, company_id):
+#         try:
+#             user = request.user
+#             company = get_object_or_404(Company, id=company_id)
+#             print("Raw POST data:", dict(request.POST))
+
+#             inquiry_data = {
+#                 'user': user,
+#                 'company': company,
+#                 'full_name': request.POST.get('full_name', ''),
+#                 'location': request.POST.get('location', ''),
+#                 'email': request.POST.get('email', ''),
+#                 'phone_number': request.POST.get('phone_number', ''),
+#                 'category': request.POST.get('category', ''),
+#                 'sub_service': request.POST.get('sub_service', ''),
+#                 'status': 'Pending',
+#             }
+
+#             inquiry = Inquiry(**inquiry_data)
+#             inquiry.save()
+            
+
+
+
+
+#             for field in ['site_plan', 'architectural_plan', 'soil_test_report', 'foundation_design',
+#                          'electrical_plan', 'plumbing_plan', 'hvac_plan', 'construction_permit', 'cost_estimation']:
+#                 if field in request.FILES:
+#                     setattr(inquiry, field, request.FILES[field])
+#             inquiry.save()
+
+#             tomorrow = timezone.now().date() + timedelta(days=1)
+#             daily_appointments = Appointment.objects.filter(
+#                 company=company,
+#                 appointment_date__date=tomorrow
+#             ).count()
+
+#             if daily_appointments >= 20:
+#                 tomorrow += timedelta(days=1)
+#                 daily_appointments = 0
+
+#             start_time = datetime.combine(tomorrow, datetime.strptime('10:00', '%H:%M').time())
+#             minutes_offset = daily_appointments * 21
+#             appointment_time = start_time + timedelta(minutes=minutes_offset)
+
+#             appointment = Appointment(
+#                 inquiry=inquiry,
+#                 company=company,
+#                 appointment_date=appointment_time
+#             )
+#             appointment.save()
+
+#             inquiry.status = 'Scheduled'
+#             inquiry.save()
+
+#             send_mail(
+#                 'Appointment Confirmation',
+#                 f'Your appointment is scheduled for {appointment_time.strftime("%Y-%m-%d %I:%M %p")} with {company.company_name}',
+#                 'fybproject6@gmail.com',
+#                 [inquiry.email],
+#                 fail_silently=True,
+#             )
+
+#             serializer = InquirySerializer(inquiry)
+#             return Response({
+#                 'message': 'Inquiry submitted successfully',
+#                 'appointment': appointment_time.strftime('%Y-%m-%d %I:%M %p'),
+#                 'data': serializer.data
+#             }, status=status.HTTP_201_CREATED)
+
+#         except Company.DoesNotExist:
+#             return Response({"error": "Company not found"}, status=status.HTTP_404_NOT_FOUND)
+#         except Exception as e:
+#             logger.error(f"Error in SubmitInquiryView: {str(e)}")
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from .models import *
+from .serializers import *
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import timedelta, datetime
+from django.core.mail import send_mail
+
 class SubmitInquiryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1650,10 +1785,16 @@ class SubmitInquiryView(APIView):
         try:
             user = request.user
             company = get_object_or_404(Company, id=company_id)
-            print("Raw POST data:", dict(request.POST))
-
             num_floors_value = request.POST.get('num_floors', None)
-            num_floors = int(num_floors_value) if num_floors_value and num_floors_value.strip() else None
+            num_floors = None
+            if num_floors_value and num_floors_value.strip() and num_floors_value != 'null':
+                try:
+                    num_floors = int(num_floors_value)
+                    if num_floors < 1:  # Ensure positive integer
+                        num_floors = None
+                except ValueError:
+                    num_floors = None
+            # Create Inquiry
             inquiry_data = {
                 'user': user,
                 'company': company,
@@ -1663,25 +1804,27 @@ class SubmitInquiryView(APIView):
                 'phone_number': request.POST.get('phone_number', ''),
                 'category': request.POST.get('category', ''),
                 'sub_service': request.POST.get('sub_service', ''),
-                'type_of_building': request.POST.get('type_of_building', ''),
-                'building_purpose': request.POST.get('building_purpose', ''),
-                'num_floors': num_floors,
-                'land_area': request.POST.get('land_area', ''),
-                'architectural_style': request.POST.get('architectural_style', ''),
-                'architectural_style_other': request.POST.get('architectural_style_other', ''),
-                'budget_estimate': request.POST.get('budget_estimate', ''),
-                'special_requirements': request.POST.get('special_requirements', ''),
                 'status': 'Pending',
             }
-
             inquiry = Inquiry(**inquiry_data)
-
-            for field in ['site_plan', 'architectural_plan', 'soil_test_report', 'foundation_design',
-                         'electrical_plan', 'plumbing_plan', 'hvac_plan', 'construction_permit', 'cost_estimation']:
-                if field in request.FILES:
-                    setattr(inquiry, field, request.FILES[field])
             inquiry.save()
 
+            # Create service-specific data based on category
+            if inquiry.category == "Engineering Consulting":
+                service_data = EngineeringConsultingData(inquiry=inquiry)
+                self._populate_service_data(service_data, request)
+            elif inquiry.category == "Building Construction Services":
+                service_data = BuildingConstructionData(inquiry=inquiry)
+                self._populate_service_data(service_data, request)
+            elif inquiry.category == "Post-Construction Maintenance":
+                service_data = PostConstructionMaintenanceData(inquiry=inquiry)
+                self._populate_service_data(service_data, request)
+            elif inquiry.category == "Safety and Training Services":
+                service_data = SafetyTrainingData(inquiry=inquiry)
+                self._populate_service_data(service_data, request)
+            service_data.save()
+
+            # Schedule appointment
             tomorrow = timezone.now().date() + timedelta(days=1)
             daily_appointments = Appointment.objects.filter(
                 company=company,
@@ -1706,6 +1849,7 @@ class SubmitInquiryView(APIView):
             inquiry.status = 'Scheduled'
             inquiry.save()
 
+            # Send email
             send_mail(
                 'Appointment Confirmation',
                 f'Your appointment is scheduled for {appointment_time.strftime("%Y-%m-%d %I:%M %p")} with {company.company_name}',
@@ -1721,13 +1865,32 @@ class SubmitInquiryView(APIView):
                 'data': serializer.data
             }, status=status.HTTP_201_CREATED)
 
-        except Company.DoesNotExist:
-            return Response({"error": "Company not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            logger.error(f"Error in SubmitInquiryView: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def _populate_service_data(self, service_data, request):
+        for field in service_data._meta.fields:
+            field_name = field.name
+            if field_name in request.POST:
+                setattr(service_data, field_name, request.POST[field_name])
+            elif field_name in request.FILES:
+                setattr(service_data, field_name, request.FILES[field_name])
 # ersathi/views.py
+# views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from .models import Inquiry, Appointment, Company
+from .serializers import InquirySerializer, AppointmentSerializer
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import datetime, timedelta
+from django.core.mail import send_mail
+import logging
+
+logger = logging.getLogger(__name__)
+
 class CompanyInquiriesView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1741,18 +1904,20 @@ class CompanyInquiriesView(APIView):
             company_id = company.id
             print(f"Company ID from user: {company_id}")
 
-            inquiries = Inquiry.objects.filter(company_id=company_id)
+            # Fetch inquiries and prefetch related service-specific data
+            inquiries = Inquiry.objects.filter(company_id=company_id).select_related(
+                'engineering_data', 'building_data', 'maintenance_data', 'training_data'
+            )
             print(f"Inquiries found: {inquiries.count()}")  # Debug log
             if not inquiries.exists():
                 return Response([], status=status.HTTP_200_OK)
+
             serializer = InquirySerializer(inquiries, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Exception as e:
             logger.error(f"Error in CompanyInquiriesView: {str(e)}")
             return Response({"error": "Failed to load inquiries"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 class UpdateInquiryStatusView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1790,7 +1955,6 @@ class UpdateInquiryStatusView(APIView):
             logger.error(f"UpdateInquiryStatusView error: {str(e)}")
             return Response({"error": "Failed to update status"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 class CompanyAppointmentsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1810,7 +1974,7 @@ class CompanyAppointmentsView(APIView):
         except Exception as e:
             logger.error(f"Error in CompanyAppointmentsView: {str(e)}")
             return Response({"error": "Failed to fetch appointments"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-# views.py
+
 class UpdateAppointmentStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1854,7 +2018,7 @@ class CheckNewInquiriesView(APIView):
             return Response({"has_new_inquiries": new_inquiries}, status=200)
         except Exception as e:
             logger.error(f"Error in CheckNewInquiriesView: {str(e)}")
-
+            return Response({"error": str(e)}, status=500)
 
 class GetLastInquiryCheckView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1878,6 +2042,19 @@ class MarkInquiriesCheckedView(APIView):
             return Response({"status": "success"}, status=200)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
+
+class GetLastInquiryCheckView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            company = request.user.company
+            last_check = company.last_inquiry_check or datetime(1970, 1, 1, tzinfo=timezone.utc)
+            return Response({"last_inquiry_check": last_check}, status=200)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+
 
 #appointment
 
@@ -2408,49 +2585,7 @@ def generate_agreement(request, appointment_id):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
-# # views.py
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework.permissions import IsAuthenticated
-# from .models import Agreement
-# from .serializers import AgreementSerializer
-
-# class CompanyAgreementsView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request):
-#         company_id = request.user.company.id
-#         agreements = Agreement.objects.filter(company_id=company_id)
-#         serializer = AgreementSerializer(agreements, many=True)
-#         return Response(serializer.data)
-
-# class ClientAgreementsView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request):
-#         agreements = Agreement.objects.filter(user=request.user)
-#         serializer = AgreementSerializer(agreements, many=True)
-#         return Response(serializer.data)
-
-# class UpdateAgreementView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def patch(self, request, agreement_id):
-#         agreement = get_object_or_404(Agreement, id=agreement_id)
-#         signed_document = request.FILES.get('signed_document')
-#         status = request.data.get('status')
-
-#         if signed_document:
-#             agreement.signed_document = signed_document
-#         if status:
-#             agreement.status = status
-#             if status == 'Signed':
-#                 agreement.signed_at = timezone.now()
-
-#         agreement.save()
-#         serializer = AgreementSerializer(agreement)
-#         return Response(serializer.data)
+#aggrement
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -2495,3 +2630,109 @@ class UpdateAgreementView(APIView):
         agreement.save()
         serializer = AgreementSerializer(agreement, context={'request': request})
         return Response(serializer.data)
+    
+
+
+
+# backend/views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from .models import Order, PaymentDistribution
+from django.shortcuts import get_object_or_404
+import logging
+
+logger = logging.getLogger(__name__)
+
+class UpdateOrderPaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            booking_id = request.data.get("bookingId")
+            payment_data = request.data.get("payment_data")
+
+            if not booking_id or not payment_data:
+                return Response({"error": "Missing bookingId or payment_data"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Find the order by bookingId
+            order = get_object_or_404(Order, booking_id=booking_id)
+
+            # Update the order status to "completed"
+            order.status = "completed"
+            order.save()
+
+            # Create a PaymentDistribution entry
+            PaymentDistribution.objects.create(
+                order=order,
+                company=order.company,
+                amount=order.total_amount,
+                payment_status="completed",
+                payment_reference=payment_data.get("token"),  # Khalti token
+                booking_id=booking_id,
+            )
+
+            return Response({"message": "Order updated with payment data"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Error in UpdateOrderPaymentView: {str(e)}")
+            return Response({"error": "Failed to update order with payment data"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+
+#order
+# backend/views.py
+class CreateOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            user_id = request.data.get("user_id")
+            buying_items = request.data.get("buying_items", [])
+            renting_items = request.data.get("renting_items", [])
+            billing_details = request.data.get("billing_details")
+            renting_details = request.data.get("renting_details")
+            booking_id = request.data.get("bookingId")
+            transaction_uuid = request.data.get("transaction_uuid")
+
+            if not buying_items and not renting_items:
+                return Response({"error": "At least one buying or renting item is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Determine order type
+            order_type = "buying" if buying_items else "renting"
+
+            # Calculate total amount
+            total_amount = 0
+            if buying_items:
+                total_amount += sum(item["price"] * item["quantity"] for item in buying_items)
+            if renting_items:
+                total_amount += sum(item["price"] * item["quantity"] for item in renting_items)
+
+            # Create the order
+            order = Order.objects.create(
+                user=request.user,
+                company_id=buying_items[0]["company_id"] if buying_items else renting_items[0]["company_id"],
+                order_type=order_type,
+                total_amount=total_amount,
+                billing_details=billing_details,
+                renting_details=renting_details,
+                booking_id=booking_id,  # Save the booking_id
+            )
+
+            # Create order items
+            for item in buying_items + renting_items:
+                OrderItem.objects.create(
+                    order=order,
+                    product_id=item["product_id"],
+                    quantity=item["quantity"],
+                    price=item["price"],
+                )
+
+            return Response({"message": "Order created", "transaction_uuid": transaction_uuid}, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.error(f"Error in CreateOrderView: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
