@@ -73,6 +73,8 @@ const ApprovedCompanies = () => {
                 <TableCell><strong>ID</strong></TableCell>
                 <TableCell><strong>Company Name</strong></TableCell>
                 <TableCell><strong>Email</strong></TableCell>
+                
+
               </TableRow>
             </TableHead>
             <TableBody>
@@ -81,6 +83,7 @@ const ApprovedCompanies = () => {
                   <TableCell>{company.id}</TableCell>
                   <TableCell>{company.company_name}</TableCell>
                   <TableCell>{company.company_email}</TableCell>
+                  
                 </TableRow>
               ))}
               {approvedCompanies.length === 0 && (
