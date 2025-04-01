@@ -568,7 +568,7 @@ def approve_company(request, pk):
         #company.password = make_password(password)  # Save hashed password
         company.save()
         User = get_user_model()
-        user = User.objects.create_user(username=username, email=f"{username}@yopmail.com")
+        user = User.objects.create_user(username=username, email=company.company_email )  #f"{username}@yopmail.com")
         user.set_password(password)
         user.is_verified = True
         user.company = company
@@ -766,6 +766,25 @@ def get_company_products(request):
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data)
 
+#update admindashboard user count and company count
+# In your Django backend (e.g., in views.py or a dedicated API view)
+
+from django.contrib.auth import get_user_model
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .models import Company
+
+CustomUser = get_user_model()
+
+@api_view(['GET'])
+def dashboard_stats(request):
+    total_users = CustomUser.objects.count()  # Count all users
+    total_approved_companies = Company.objects.filter(is_approved=True).count()  # Count only approved companies
+
+    return Response({
+        "total_users": total_users,
+        "total_approved_companies": total_approved_companies,
+    })
 
 # #post Product from from company 
 # class CreateProduct(APIView):
@@ -2736,3 +2755,33 @@ class CreateOrderView(APIView):
         except Exception as e:
             logger.error(f"Error in CreateOrderView: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+#Safety Tranning Email
+from django.core.mail import send_mail
+from django.http import JsonResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_training_email(request):
+    try:
+        data = request.data
+        to_email = data.get('to_email')
+        full_name = data.get('full_name')
+        email_body = data.get('email_body')
+
+        if not to_email or not email_body:
+            return JsonResponse({'error': 'Missing required fields'}, status=400)
+
+        subject = f"Training Schedule Confirmation for {full_name}"
+        message = email_body
+        from_email = 'fybproject6@gmail.com'  # Using the email from your settings.py
+        recipient_list = [to_email]
+
+        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+
+        return JsonResponse({'message': 'Email sent successfully'}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
