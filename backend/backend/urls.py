@@ -30,6 +30,7 @@ from ersathi.views import (
     company_info,
     company_info_detail,
     create_company_service,
+    dashboard_stats,
     
     delete_company_service,
     delete_project,
@@ -46,6 +47,7 @@ from ersathi.views import (
     get_company_team_members,
     get_user_profile,
     project_list_create,
+    send_training_email,
    
     team_member_list_create,
     
@@ -105,7 +107,8 @@ urlpatterns = [
     path('reject-company/<int:pk>/', reject_company, name='reject-company'),
     path('api/confirm-email/<str:token>/', ConfirmEmailView.as_view(), name='confirm-email'),
     path('company-registration/<int:pk>/', get_company_details, name='company-details'),
-
+    #dashboard stat
+    path('dashboard-stats/', dashboard_stats, name='dashboard_stats'),
     #company info
     path('company-info/', company_info, name='company-info-list'), #post
     path('company-info/<int:company_id>/', company_info_detail, name='company-info-detail'),  # Handles GET and PUT
@@ -187,6 +190,9 @@ urlpatterns = [
     # JWT Token
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    #safetyemail
+    path('api/send-training-email/', send_training_email, name='send_training_email'),
 ]
 
 # Serve media files during development
