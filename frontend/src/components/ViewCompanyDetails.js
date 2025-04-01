@@ -41,11 +41,11 @@ const ViewCompanyDetails = () => {
       .then(() => {
         alert("Company approved successfully!");
         // After approving, go back to the admin dashboard
-        navigate("/admin-dashboard");
+        navigate("/admin");
       })
       .catch((err) => {
         console.error("Error approving company:", err.response || err.message);
-        alert("Failed to approve the company.");
+        // alert("Failed to approve the company.");
       });
   };
 
@@ -55,7 +55,7 @@ const ViewCompanyDetails = () => {
       .then(() => {
         alert("Company rejected successfully!");
         // After rejecting, go back to the admin dashboard
-        navigate("/admin-dashboard");
+        navigate("/admin");
       })
       .catch((err) => {
         console.error("Error rejecting company:", err.response || err.message);
@@ -203,16 +203,7 @@ const ViewCompanyDetails = () => {
           </Box>
         </Paper>
 
-        {/* Back to Dashboard Button */}
-        <Box sx={{ textAlign: "center", marginTop: "20px" }}>
-          <Button
-            variant="outlined"
-            color="secondary"
-            onClick={() => navigate("/admin")}
-          >
-            Back to Dashboard
-          </Button>
-        </Box>
+        
       </Box>
     </Box>
   );
