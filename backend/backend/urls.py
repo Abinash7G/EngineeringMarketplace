@@ -193,6 +193,7 @@ urlpatterns = [
 
     #safetyemail
     path('api/send-training-email/', send_training_email, name='send_training_email'),
+    path('api/upload-certificate/<int:inquiry_id>/', views.upload_certificate, name='upload_certificate'),
 ]
 
 # Serve media files during development

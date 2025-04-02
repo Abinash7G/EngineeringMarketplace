@@ -424,7 +424,7 @@ class Inquiry(models.Model):
         default='Pending'
     )
     created_at = models.DateTimeField(auto_now_add=True)
-
+    certificate = models.FileField(upload_to='certificates/', null=True, blank=True)  
     def __str__(self):
         return f"{self.full_name} - {self.company.company_name}"
 
