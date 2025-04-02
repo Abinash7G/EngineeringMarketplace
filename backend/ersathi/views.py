@@ -1786,15 +1786,124 @@ def send_inquiry_notification(sender, instance, created, **kwargs):
 #             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # views.py
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework.permissions import IsAuthenticated
+# from rest_framework import status
+# from .models import *
+# from .serializers import *
+# from django.shortcuts import get_object_or_404
+# from django.utils import timezone
+# from datetime import timedelta, datetime
+# from django.core.mail import send_mail
+
+# class SubmitInquiryView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request, company_id):
+#         try:
+#             user = request.user
+#             company = get_object_or_404(Company, id=company_id)
+#             num_floors_value = request.POST.get('num_floors', None)
+#             num_floors = None
+#             if num_floors_value and num_floors_value.strip() and num_floors_value != 'null':
+#                 try:
+#                     num_floors = int(num_floors_value)
+#                     if num_floors < 1:  # Ensure positive integer
+#                         num_floors = None
+#                 except ValueError:
+#                     num_floors = None
+#             # Create Inquiry
+#             inquiry_data = {
+#                 'user': user,
+#                 'company': company,
+#                 'full_name': request.POST.get('full_name', ''),
+#                 'location': request.POST.get('location', ''),
+#                 'email': request.POST.get('email', ''),
+#                 'phone_number': request.POST.get('phone_number', ''),
+#                 'category': request.POST.get('category', ''),
+#                 'sub_service': request.POST.get('sub_service', ''),
+#                 'status': 'Pending',
+#             }
+#             inquiry = Inquiry(**inquiry_data)
+#             inquiry.save()
+
+#             # Create service-specific data based on category
+#             if inquiry.category == "Engineering Consulting":
+#                 service_data = EngineeringConsultingData(inquiry=inquiry)
+#                 self._populate_service_data(service_data, request)
+#             elif inquiry.category == "Building Construction Services":
+#                 service_data = BuildingConstructionData(inquiry=inquiry)
+#                 self._populate_service_data(service_data, request)
+#             elif inquiry.category == "Post-Construction Maintenance":
+#                 service_data = PostConstructionMaintenanceData(inquiry=inquiry)
+#                 self._populate_service_data(service_data, request)
+#             elif inquiry.category == "Safety and Training Services":
+#                 service_data = SafetyTrainingData(inquiry=inquiry)
+#                 self._populate_service_data(service_data, request)
+#             service_data.save()
+
+#             # Schedule appointment
+#             tomorrow = timezone.now().date() + timedelta(days=1)
+#             daily_appointments = Appointment.objects.filter(
+#                 company=company,
+#                 appointment_date__date=tomorrow
+#             ).count()
+
+#             if daily_appointments >= 20:
+#                 tomorrow += timedelta(days=1)
+#                 daily_appointments = 0
+
+#             start_time = datetime.combine(tomorrow, datetime.strptime('10:00', '%H:%M').time())
+#             minutes_offset = daily_appointments * 21
+#             appointment_time = start_time + timedelta(minutes=minutes_offset)
+
+#             appointment = Appointment(
+#                 inquiry=inquiry,
+#                 company=company,
+#                 appointment_date=appointment_time
+#             )
+#             appointment.save()
+
+#             inquiry.status = 'Scheduled'
+#             inquiry.save()
+
+#             # Send email
+#             send_mail(
+#                 'Appointment Confirmation',
+#                 f'Your appointment is scheduled for {appointment_time.strftime("%Y-%m-%d %I:%M %p")} with {company.company_name}',
+#                 'fybproject6@gmail.com',
+#                 [inquiry.email],
+#                 fail_silently=True,
+#             )
+
+#             serializer = InquirySerializer(inquiry)
+#             return Response({
+#                 'message': 'Inquiry submitted successfully',
+#                 'appointment': appointment_time.strftime('%Y-%m-%d %I:%M %p'),
+#                 'data': serializer.data
+#             }, status=status.HTTP_201_CREATED)
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#     def _populate_service_data(self, service_data, request):
+#         for field in service_data._meta.fields:
+#             field_name = field.name
+#             if field_name in request.POST:
+#                 setattr(service_data, field_name, request.POST[field_name])
+#             elif field_name in request.FILES:
+#                 setattr(service_data, field_name, request.FILES[field_name])
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from .models import *
-from .serializers import *
+from .models import Inquiry, Appointment, Company, EngineeringConsultingData, BuildingConstructionData, PostConstructionMaintenanceData, SafetyTrainingData
+from .serializers import InquirySerializer
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from django.core.mail import send_mail
 
 class SubmitInquiryView(APIView):
@@ -1804,6 +1913,8 @@ class SubmitInquiryView(APIView):
         try:
             user = request.user
             company = get_object_or_404(Company, id=company_id)
+            
+            # Handle num_floors safely
             num_floors_value = request.POST.get('num_floors', None)
             num_floors = None
             if num_floors_value and num_floors_value.strip() and num_floors_value != 'null':
@@ -1813,6 +1924,7 @@ class SubmitInquiryView(APIView):
                         num_floors = None
                 except ValueError:
                     num_floors = None
+
             # Create Inquiry
             inquiry_data = {
                 'user': user,
@@ -1832,57 +1944,79 @@ class SubmitInquiryView(APIView):
             if inquiry.category == "Engineering Consulting":
                 service_data = EngineeringConsultingData(inquiry=inquiry)
                 self._populate_service_data(service_data, request)
+                service_data.save()
             elif inquiry.category == "Building Construction Services":
                 service_data = BuildingConstructionData(inquiry=inquiry)
                 self._populate_service_data(service_data, request)
+                service_data.save()
             elif inquiry.category == "Post-Construction Maintenance":
                 service_data = PostConstructionMaintenanceData(inquiry=inquiry)
                 self._populate_service_data(service_data, request)
+                service_data.save()
             elif inquiry.category == "Safety and Training Services":
                 service_data = SafetyTrainingData(inquiry=inquiry)
                 self._populate_service_data(service_data, request)
-            service_data.save()
+                service_data.save()
 
-            # Schedule appointment
-            tomorrow = timezone.now().date() + timedelta(days=1)
-            daily_appointments = Appointment.objects.filter(
-                company=company,
-                appointment_date__date=tomorrow
-            ).count()
+            # Schedule appointment only for Engineering Consulting and Building Construction Services
+            if inquiry.category in ["Engineering Consulting", "Building Construction Services"]:
+                # Define time constraints
+                start_hour = 10  # 10:00 AM
+                end_hour = 17   # 5:00 PM
+                slot_duration = 21  # Duration in minutes per appointment
+                max_slots_per_day = ((end_hour - start_hour) * 60) // slot_duration  # Total slots between 10 AM and 5 PM
 
-            if daily_appointments >= 20:
-                tomorrow += timedelta(days=1)
-                daily_appointments = 0
+                # Start checking from tomorrow
+                current_date = timezone.now().date() + timedelta(days=1)
+                while True:
+                    daily_appointments = Appointment.objects.filter(
+                        company=company,
+                        appointment_date__date=current_date
+                    ).count()
 
-            start_time = datetime.combine(tomorrow, datetime.strptime('10:00', '%H:%M').time())
-            minutes_offset = daily_appointments * 21
-            appointment_time = start_time + timedelta(minutes=minutes_offset)
+                    if daily_appointments < max_slots_per_day:
+                        # Calculate the appointment time
+                        start_time = datetime.combine(current_date, datetime.strptime(f'{start_hour}:00', '%H:%M').time())
+                        minutes_offset = daily_appointments * slot_duration
+                        appointment_time = start_time + timedelta(minutes=minutes_offset)
 
-            appointment = Appointment(
-                inquiry=inquiry,
-                company=company,
-                appointment_date=appointment_time
-            )
-            appointment.save()
+                        # Ensure the appointment doesn't exceed 5:00 PM
+                        end_time = appointment_time + timedelta(minutes=slot_duration)
+                        if end_time.time() <= datetime.strptime('17:00', '%H:%M').time():
+                            appointment = Appointment(
+                                inquiry=inquiry,
+                                company=company,
+                                appointment_date=appointment_time
+                            )
+                            appointment.save()
 
-            inquiry.status = 'Scheduled'
-            inquiry.save()
+                            inquiry.status = 'Scheduled'
+                            inquiry.save()
 
-            # Send email
-            send_mail(
-                'Appointment Confirmation',
-                f'Your appointment is scheduled for {appointment_time.strftime("%Y-%m-%d %I:%M %p")} with {company.company_name}',
-                'fybproject6@gmail.com',
-                [inquiry.email],
-                fail_silently=True,
-            )
+                            # Send email
+                            send_mail(
+                                'Appointment Confirmation',
+                                f'Your appointment is scheduled for {appointment_time.strftime("%Y-%m-%d %I:%M %p")} with {company.company_name}',
+                                'fybproject6@gmail.com',
+                                [inquiry.email],
+                                fail_silently=True,
+                            )
 
-            serializer = InquirySerializer(inquiry)
-            return Response({
-                'message': 'Inquiry submitted successfully',
-                'appointment': appointment_time.strftime('%Y-%m-%d %I:%M %p'),
-                'data': serializer.data
-            }, status=status.HTTP_201_CREATED)
+                            serializer = InquirySerializer(inquiry)
+                            return Response({
+                                'message': 'Inquiry submitted successfully',
+                                'appointment': appointment_time.strftime('%Y-%m-%d %I:%M %p'),
+                                'data': serializer.data
+                            }, status=status.HTTP_201_CREATED)
+                    # If the day is full, move to the next day
+                    current_date += timedelta(days=1)
+            else:
+                # For other categories, just return success without scheduling an appointment
+                serializer = InquirySerializer(inquiry)
+                return Response({
+                    'message': 'Inquiry submitted successfully. No appointment required for this service.',
+                    'data': serializer.data
+                }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -2757,11 +2891,14 @@ class CreateOrderView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-#Safety Tranning Email
+# # #Safety Tranning 
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import Inquiry
+from django.core.files.storage import default_storage
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -2771,17 +2908,50 @@ def send_training_email(request):
         to_email = data.get('to_email')
         full_name = data.get('full_name')
         email_body = data.get('email_body')
+        inquiry_id = data.get('inquiry_id')  # Add inquiry_id to the request data
 
-        if not to_email or not email_body:
+        if not to_email or not email_body or not inquiry_id:
             return JsonResponse({'error': 'Missing required fields'}, status=400)
+
+        # Update the inquiry status to "Scheduled"
+        inquiry = Inquiry.objects.get(id=inquiry_id)
+        if inquiry.status != 'Pending':
+            return JsonResponse({'error': 'Inquiry must be in Pending status to send email'}, status=400)
+        inquiry.status = 'Scheduled'
+        inquiry.save()
 
         subject = f"Training Schedule Confirmation for {full_name}"
         message = email_body
-        from_email = 'fybproject6@gmail.com'  # Using the email from your settings.py
+        from_email = 'fybproject6@gmail.com'
         recipient_list = [to_email]
 
         send_mail(subject, message, from_email, recipient_list, fail_silently=False)
 
         return JsonResponse({'message': 'Email sent successfully'}, status=200)
+    except Inquiry.DoesNotExist:
+        return JsonResponse({'error': 'Inquiry not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_certificate(request, inquiry_id):
+    try:
+        inquiry = Inquiry.objects.get(id=inquiry_id)
+        if inquiry.status != 'Completed':
+            return JsonResponse({'error': 'Training must be marked as Completed to upload a certificate'}, status=400)
+
+        if 'certificate' not in request.FILES:
+            return JsonResponse({'error': 'No certificate file provided'}, status=400)
+
+        certificate_file = request.FILES['certificate']
+        inquiry.certificate = certificate_file
+        inquiry.save()
+
+        return JsonResponse({'message': 'Certificate uploaded successfully', 'certificate_url': inquiry.certificate.url}, status=200)
+    except Inquiry.DoesNotExist:
+        return JsonResponse({'error': 'Inquiry not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
