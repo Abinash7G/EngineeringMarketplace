@@ -38,6 +38,7 @@ import RentVerificationAdmin from './components/RentVerificationAdmin';
 import CDConsultingInquiryForm from './components/CDConsultingInquiryForm';
 import InquiriesList from './components/InquiriesList';
 import CDAgreements from './components/CDAgreements';
+import ClientServices from './components/ClientServices';
 //import Agreements from './components/Agreements';
 
 
@@ -93,6 +94,7 @@ const App = () => {
         <Route path="/admin/rent-verification" element={<RentVerificationAdmin/>} />
         {/* <Route path="/client/agreements" element={<Agreements/>} /> */}
         <Route path="/client/agreements" element={<CDAgreements/>} />
+        <Route path="/client/clientservices" element={<ClientServices/>} />
 
         
         
