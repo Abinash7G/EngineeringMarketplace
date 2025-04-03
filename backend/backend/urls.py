@@ -6,8 +6,10 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from ersathi import views
 from ersathi.views import (
+    AddCommentView,
     CheckNewInquiriesView,
     ClientAgreementsView,
+    ClientInquiriesView,
     CompanyAgreementsView,
     CompanyAppointmentsView,
     CompanyInquiriesView,
@@ -194,6 +196,8 @@ urlpatterns = [
     #safetyemail
     path('api/send-training-email/', send_training_email, name='send_training_email'),
     path('api/upload-certificate/<int:inquiry_id>/', views.upload_certificate, name='upload_certificate'),
+    path('api/client-inquiries/', ClientInquiriesView.as_view(), name='client-inquiries'),
+    path('api/add-comment/<int:inquiry_id>/', AddCommentView.as_view(), name='add-comment'),
 ]
 
 # Serve media files during development

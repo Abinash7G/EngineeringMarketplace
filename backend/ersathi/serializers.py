@@ -202,13 +202,17 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
 #         fields = ['id', 'inquiry', 'company', 'appointment_date', 'duration_minutes', 'status', 'created_at']
 # serializers.py
 from rest_framework import serializers
-from .models import Inquiry, Appointment, Company, EngineeringConsultingData, BuildingConstructionData, PostConstructionMaintenanceData, SafetyTrainingData
+from .models import Inquiry, Appointment, Company, EngineeringConsultingData, BuildingConstructionData, PostConstructionMaintenanceData, SafetyTrainingData, Comment
 
 class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = ['id', 'appointment_date']
 
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['id', 'comment_text', 'created_at']
 class EngineeringConsultingDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = EngineeringConsultingData
@@ -230,25 +234,42 @@ class SafetyTrainingDataSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class InquirySerializer(serializers.ModelSerializer):
-    # Add a field to dynamically include service-specific data
     service_data = serializers.SerializerMethodField()
-
+    certificate = serializers.SerializerMethodField()
+    comments = CommentSerializer(many=True, read_only=True)
     class Meta:
         model = Inquiry
-        fields = ['id', 'full_name', 'location', 'email', 'phone_number', 'category', 'sub_service', 'status', 'created_at', 'service_data']
+        fields = [
+            'id', 'full_name', 'location', 'email', 'phone_number',
+            'category', 'sub_service', 'status', 'created_at', 'certificate',
+            'service_data', 'comments'
+        ]
 
     def get_service_data(self, obj):
-        # Dynamically fetch the related service-specific data based on the category
-        if obj.category == "Engineering Consulting" and hasattr(obj, 'engineering_data'):
-            return EngineeringConsultingDataSerializer(obj.engineering_data).data
-        elif obj.category == "Building Construction Services" and hasattr(obj, 'building_data'):
-            return BuildingConstructionDataSerializer(obj.building_data).data
-        elif obj.category == "Post-Construction Maintenance" and hasattr(obj, 'maintenance_data'):
-            return PostConstructionMaintenanceDataSerializer(obj.maintenance_data).data
-        elif obj.category == "Safety and Training Services" and hasattr(obj, 'training_data'):
-            return SafetyTrainingDataSerializer(obj.training_data).data
-        return None
+        try:
+            if obj.category == "Engineering Consulting" and hasattr(obj, 'engineering_data') and obj.engineering_data:
+                return EngineeringConsultingDataSerializer(obj.engineering_data, context=self.context).data
+            elif obj.category == "Building Construction Services" and hasattr(obj, 'building_data') and obj.building_data:
+                return BuildingConstructionDataSerializer(obj.building_data, context=self.context).data
+            elif obj.category == "Post-Construction Maintenance" and hasattr(obj, 'maintenance_data') and obj.maintenance_data:
+                return PostConstructionMaintenanceDataSerializer(obj.maintenance_data, context=self.context).data
+            elif obj.category == "Safety and Training Services" and hasattr(obj, 'training_data') and obj.training_data:
+                return SafetyTrainingDataSerializer(obj.training_data, context=self.context).data
+            return {}
+        except Exception as e:
+            print(f"Error serializing service_data for inquiry {obj.id}: {str(e)}")
+            return {}
 
+    def get_certificate(self, obj):
+        try:
+            if obj.certificate and hasattr(obj.certificate, 'url'):
+                request = self.context.get('request')
+                return request.build_absolute_uri(obj.certificate.url) if request else obj.certificate.url
+            return None
+        except Exception as e:
+            print(f"Error serializing certificate for inquiry {obj.id}: {str(e)}")
+            return None
+    
 class AppointmentSerializer(serializers.ModelSerializer):
     inquiry = InquirySerializer(read_only=True)
     company = serializers.CharField(source='company.company_name', read_only=True)
