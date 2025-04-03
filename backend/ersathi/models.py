@@ -427,6 +427,15 @@ class Inquiry(models.Model):
     certificate = models.FileField(upload_to='certificates/', null=True, blank=True)  
     def __str__(self):
         return f"{self.full_name} - {self.company.company_name}"
+    
+class Comment(models.Model):
+    inquiry = models.ForeignKey(Inquiry, on_delete=models.CASCADE, related_name='comments')
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='comments')
+    comment_text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment on Inquiry {self.inquiry.id} by {self.company.company_name}"
 
 # Base model for service-specific form data
 class ServiceFormData(models.Model):
