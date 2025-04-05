@@ -6,7 +6,7 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from ersathi import views
 from ersathi.views import (
-    AddCommentView,
+    #AddCommentView,
     CheckNewInquiriesView,
     ClientAgreementsView,
     ClientInquiriesView,
@@ -197,9 +197,20 @@ urlpatterns = [
     path('api/send-training-email/', send_training_email, name='send_training_email'),
     path('api/upload-certificate/<int:inquiry_id>/', views.upload_certificate, name='upload_certificate'),
     path('api/client-inquiries/', ClientInquiriesView.as_view(), name='client-inquiries'),
-    path('api/add-comment/<int:inquiry_id>/', AddCommentView.as_view(), name='add-comment'),
-]
+    # path('api/add-comment/<int:inquiry_id>/', AddCommentView.as_view(), name='add-comment'),
+    path('api/add-comment/<int:inquiry_id>/', views.add_comment, name='add-comment'),
+    path('api/add-client-comment/<int:inquiry_id>/', views.add_client_comment, name='add-client-comment'),
+    path('api/upload-progress-photos/<int:inquiry_id>/', views.upload_progress_photos, name='upload-progress-photos'),
+    path('api/upload-inspection-reports/<int:inquiry_id>/', views.upload_inspection_reports, name='upload-inspection-reports'),
+    path('api/upload-completion-certificate/<int:inquiry_id>/', views.upload_completion_certificate, name='upload-completion-certificate'),
+    path('api/update-construction-progress/<int:inquiry_id>/', views.update_construction_progress, name='update-construction-progress'),
+    path('api/update-comment-response/<int:comment_id>/', views.update_comment_response, name='update-comment-response'),
+    path('api/update-construction-progress/<int:inquiry_id>/', views.update_construction_progress, name='update-construction-progress'),
 
+
+
+
+]
 # Serve media files during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

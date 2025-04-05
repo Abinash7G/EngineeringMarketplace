@@ -16,7 +16,7 @@ from django.utils.crypto import get_random_string
 
 
 from .models import Company 
-from .serializers import CompanyRegistrationSerializer
+from .serializers import CommentSerializer, CompanyRegistrationSerializer
 from rest_framework.decorators import api_view
 
 from .models import Service  # Import your Service model
@@ -2725,65 +2725,65 @@ class UpdateAgreementView(APIView):
         agreement.save()
         serializer = AgreementSerializer(agreement, context={'request': request})
         return Response(serializer.data)
-#postconstruction mentainance!
-#     from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django.core.mail import send_mail
-from django.shortcuts import get_object_or_404
-from .models import Inquiry, Comment, Company
-from .serializers import CommentSerializer
+# #postconstruction mentainance!
+# #     from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework.permissions import IsAuthenticated
+# from django.core.mail import send_mail
+# from django.shortcuts import get_object_or_404
+# 
+# from .serializers import CommentSerializer
 
-class AddCommentView(APIView):
-    permission_classes = [IsAuthenticated]
+# class AddCommentView(APIView):
+#     permission_classes = [IsAuthenticated]
 
-    def post(self, request, inquiry_id):
-        try:
-            company = request.user.company
-            inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=company)
-            comment_text = request.data.get('comment_text')
+#     def post(self, request, inquiry_id):
+#         try:
+#             company = request.user.company
+#             inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=company)
+#             comment_text = request.data.get('comment_text')
 
-            if not comment_text:
-                return Response({"error": "Comment text is required"}, status=400)
+#             if not comment_text:
+#                 return Response({"error": "Comment text is required"}, status=400)
 
-            # Create comment
-            comment = Comment.objects.create(
-                inquiry=inquiry,
-                company=company,
-                comment_text=comment_text
-            )
+#             # Create comment
+#             comment = Comment.objects.create(
+#                 inquiry=inquiry,
+#                 company=company,
+#                 comment_text=comment_text
+#             )
 
-            # Send email to client
-            email_subject = f"Update on Your Inquiry #{inquiry.id} - {inquiry.category}"
-            email_body = f"""
-Dear {inquiry.full_name},
+#             # Send email to client
+#             email_subject = f"Update on Your Inquiry #{inquiry.id} - {inquiry.category}"
+#             email_body = f"""
+# Dear {inquiry.full_name},
 
-We have an update regarding your inquiry for {inquiry.sub_service}:
+# We have an update regarding your inquiry for {inquiry.sub_service}:
 
-Comment from {company.company_name}:
-"{comment_text}"
+# Comment from {company.company_name}:
+# "{comment_text}"
 
-Please feel free to reach out if you have any questions.
+# Please feel free to reach out if you have any questions.
 
-Best regards,
-{company.company_name}
-"""
-            send_mail(
-                email_subject,
-                email_body,
-                'fybproject6@gmail.com',
-                [inquiry.email],
-                fail_silently=False,
-            )
+# Best regards,
+# {company.company_name}
+# """
+#             send_mail(
+#                 email_subject,
+#                 email_body,
+#                 'fybproject6@gmail.com',
+#                 [inquiry.email],
+#                 fail_silently=False,
+#             )
 
-            serializer = CommentSerializer(comment)
-            return Response({
-                "message": "Comment added and email sent successfully",
-                "comment": serializer.data
-            }, status=200)
-        except Exception as e:
-            print(f"Error adding comment: {str(e)}")
-            return Response({"error": str(e)}, status=500)
+#             serializer = CommentSerializer(comment)
+#             return Response({
+#                 "message": "Comment added and email sent successfully",
+#                 "comment": serializer.data
+#             }, status=200)
+#         except Exception as e:
+#             print(f"Error adding comment: {str(e)}")
+#             return Response({"error": str(e)}, status=500)
 
 
 
@@ -2953,5 +2953,457 @@ def upload_certificate(request, inquiry_id):
         return JsonResponse({'error': 'Inquiry not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+#construction 
+# views.py
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from .models import Inquiry, BuildingConstructionData
+from django.core.files.storage import default_storage
+import os
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from .models import Inquiry, BuildingConstructionData
+from django.core.files.storage import default_storage
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_progress_photos(request, inquiry_id):
+    try:
+        inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=request.user.company)
+        building_data = inquiry.building_data
+        photos = request.FILES.getlist('photos')
+        if not photos:
+            return Response({'error': 'Please select photos to upload'}, status=400)
+        
+        photo_paths = building_data.progress_photos or []
+        for photo in photos:
+            file_path = f'inquiry_files/building/{inquiry_id}_{photo.name}'
+            default_storage.save(file_path, photo)
+            photo_paths.append(file_path)
+        building_data.progress_photos = photo_paths
+        building_data.save()
+        return Response({'message': 'Progress photos uploaded successfully'}, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_inspection_reports(request, inquiry_id):
+    try:
+        inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=request.user.company)
+        building_data = inquiry.building_data
+        reports = request.FILES.getlist('reports')
+        if not reports:
+            return Response({'error': 'Please select reports to upload'}, status=400)
+        
+        report_paths = building_data.inspection_reports or []
+        for report in reports:
+            file_path = f'inquiry_files/building/{inquiry_id}_{report.name}'
+            default_storage.save(file_path, report)
+            report_paths.append(file_path)
+        building_data.inspection_reports = report_paths
+        building_data.save()
+        return Response({'message': 'Inspection reports uploaded successfully'}, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_completion_certificate(request, inquiry_id):
+    try:
+        inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=request.user.company)
+        building_data = inquiry.building_data
+        certificate = request.FILES.get('completion_certificate')
+        if not certificate:
+            return Response({'error': 'Please select a certificate to upload'}, status=400)
+        
+        file_path = f'inquiry_files/building/{inquiry_id}_{certificate.name}'
+        default_storage.save(file_path, certificate)
+        building_data.completion_certificate = file_path
+        building_data.save()
+        return Response({'message': 'Completion certificate uploaded successfully'}, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+    
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_inquiry_status(request, inquiry_id):
+    try:
+        inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=request.user.company)
+        new_status = request.data.get('status')
+        if not new_status:
+            return Response({'error': 'Status is required'}, status=400)
+        old_status = inquiry.status
+        inquiry.status = new_status
+        inquiry.save()
+        try:
+            if inquiry.email:
+                send_mail(
+                    f"Status Update for Your Inquiry #{inquiry.id} - {inquiry.category}",
+                    f"""
+Dear {inquiry.full_name},
+The status of your inquiry for {inquiry.sub_service} has been updated:
+Previous Status: {old_status}
+New Status: {new_status}
+Please feel free to reach out with any questions.
+Best regards,
+{inquiry.company.company_name}
+                    """,
+                    'fybproject6@gmail.com',
+                    [inquiry.email],
+                    fail_silently=True,
+                )
+        except Exception as email_error:
+            print(f"Error sending status update email for inquiry {inquiry_id}: {str(email_error)}")
+        return Response({'message': 'Status updated successfully'}, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_construction_progress(request, inquiry_id):
+    try:
+        inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=request.user.company)
+        building_data = inquiry.building_data
+        data = request.data
+        changes = []
+
+        if 'permit_application_date' in data:
+            building_data.permit_application_date = data['permit_application_date']
+            changes.append(f"Permit Application Date: {data['permit_application_date']}")
+        if 'permit_status' in data:
+            valid_statuses = ['Submitted', 'Under Review', 'Approved', 'Rejected']
+            if data['permit_status'] not in valid_statuses:
+                return Response({'error': 'Invalid permit status'}, status=400)
+            changes.append(f"Permit Status: {data['permit_status']}")
+            building_data.permit_status = data['permit_status']
+        if 'construction_start_date' in data:
+            building_data.construction_start_date = data['construction_start_date']
+            changes.append(f"Construction Start Date: {data['construction_start_date']}")
+        if 'construction_phase' in data:
+            valid_phases = ['Foundation', 'Walls', 'Roof', 'Finishing']
+            if data['construction_phase'] not in valid_phases:
+                return Response({'error': 'Invalid construction phase'}, status=400)
+            changes.append(f"Construction Phase: {data['construction_phase']}")
+            building_data.construction_phase = data['construction_phase']
+        if 'progress_percentage' in data:
+            try:
+                percentage = int(data['progress_percentage'])
+                if not 0 <= percentage <= 100:
+                    return Response({'error': 'Progress percentage must be between 0 and 100'}, status=400)
+                changes.append(f"Progress Percentage: {percentage}%")
+                building_data.progress_percentage = percentage
+            except ValueError:
+                return Response({'error': 'Progress percentage must be a number'}, status=400)
+        if 'inspection_dates' in data:
+            building_data.inspection_dates = data['inspection_dates']
+            changes.append(f"Inspection Dates: {', '.join(data['inspection_dates'])}")
+        if 'completion_certificate_application_date' in data:
+            building_data.completion_certificate_application_date = data['completion_certificate_application_date']
+            changes.append(f"Completion Certificate Application Date: {data['completion_certificate_application_date']}")
+        if 'handover_date' in data:
+            building_data.handover_date = data['handover_date']
+            changes.append(f"Handover Date: {data['handover_date']}")
+        if 'warranty_details' in data:
+            building_data.warranty_details = data['warranty_details']
+            changes.append(f"Warranty Details: {data['warranty_details']}")
+
+        building_data.save()
+
+        try:
+            if changes and inquiry.email:
+                send_mail(
+                    f"Progress Update for Your Inquiry #{inquiry.id} - {inquiry.category}",
+                    f"""
+Dear {inquiry.full_name},
+The progress of your inquiry for {inquiry.sub_service} has been updated:
+Changes:
+{chr(10).join(f"- {change}" for change in changes)}
+Please feel free to reach out with any questions.
+Best regards,
+{inquiry.company.company_name}
+                    """,
+                    'fybproject6@gmail.com',
+                    [inquiry.email],
+                    fail_silently=True,
+                )
+        except Exception as email_error:
+            print(f"Error sending progress update email for inquiry {inquiry_id}: {str(email_error)}")
+
+        return Response({'message': 'Construction progress updated'}, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)   
+# @api_view(['PATCH'])
+# @permission_classes([IsAuthenticated])
+# def update_construction_progress(request, inquiry_id):
+#     try:
+#         inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=request.user.company)
+#         building_data = inquiry.building_data
+#         data = request.data
+#         changes = []
+
+#         if 'permit_application_date' in data:
+#             building_data.permit_application_date = data['permit_application_date']
+#             changes.append(f"Permit Application Date: {data['permit_application_date']}")
+#         if 'permit_status' in data:
+#             valid_statuses = ['Submitted', 'Under Review', 'Approved', 'Rejected']
+#             if data['permit_status'] not in valid_statuses:
+#                 return Response({'error': 'Invalid permit status'}, status=400)
+#             changes.append(f"Permit Status: {data['permit_status']}")
+#             building_data.permit_status = data['permit_status']
+#         if 'construction_start_date' in data:
+#             building_data.construction_start_date = data['construction_start_date']
+#             changes.append(f"Construction Start Date: {data['construction_start_date']}")
+#         if 'construction_phase' in data:
+#             valid_phases = ['Foundation', 'Walls', 'Roof', 'Finishing']
+#             if data['construction_phase'] not in valid_phases:
+#                 return Response({'error': 'Invalid construction phase'}, status=400)
+#             changes.append(f"Construction Phase: {data['construction_phase']}")
+#             building_data.construction_phase = data['construction_phase']
+#         if 'progress_percentage' in data:
+#             try:
+#                 percentage = int(data['progress_percentage'])
+#                 if not 0 <= percentage <= 100:
+#                     return Response({'error': 'Progress percentage must be between 0 and 100'}, status=400)
+#                 changes.append(f"Progress Percentage: {percentage}%")
+#                 building_data.progress_percentage = percentage
+#             except ValueError:
+#                 return Response({'error': 'Progress percentage must be a number'}, status=400)
+#         if 'inspection_dates' in data:
+#             building_data.inspection_dates = data['inspection_dates']
+#             changes.append(f"Inspection Dates: {', '.join(data['inspection_dates'])}")
+#         if 'completion_certificate_application_date' in data:
+#             building_data.completion_certificate_application_date = data['completion_certificate_application_date']
+#             changes.append(f"Completion Certificate Application Date: {data['completion_certificate_application_date']}")
+#         if 'handover_date' in data:
+#             building_data.handover_date = data['handover_date']
+#             changes.append(f"Handover Date: {data['handover_date']}")
+#         if 'warranty_details' in data:
+#             building_data.warranty_details = data['warranty_details']
+#             changes.append(f"Warranty Details: {data['warranty_details']}")
+
+#         building_data.save()
+
+#         # Send email notification to client
+#         try:
+#             if changes and inquiry.email:
+#                 send_mail(
+#                     f"Progress Update for Your Inquiry #{inquiry.id} - {inquiry.category}",
+#                     f"""
+# Dear {inquiry.full_name},
+# The progress of your inquiry for {inquiry.sub_service} has been updated:
+# Changes:
+# {chr(10).join(f"- {change}" for change in changes)}
+# Please feel free to reach out with any questions.
+# Best regards,
+# {inquiry.company.company_name}
+#                     """,
+#                     'fybproject6@gmail.com',
+#                     [inquiry.email],
+#                     fail_silently=True,
+#                 )
+#         except Exception as email_error:
+#             print(f"Error sending progress update email for inquiry {inquiry_id}: {str(email_error)}")
+
+#         return Response({'message': 'Construction progress updated'}, status=200)
+#     except Exception as e:
+#         return Response({'error': str(e)}, status=500)
+    
+# @api_view(['PATCH'])
+# @permission_classes([IsAuthenticated])
+# def update_inquiry_status(request, inquiry_id):
+#     try:
+#         inquiry = get_object_or_404(Inquiry, id=inquiry_id, company=request.user.company)
+#         new_status = request.data.get('status')
+#         if not new_status:
+#             return Response({'error': 'Status is required'}, status=400)
+#         old_status = inquiry.status
+#         inquiry.status = new_status
+#         inquiry.save()
+#         # Send email notification to client
+#         try:
+#             if inquiry.email:
+#                 send_mail(
+#                     f"Status Update for Your Inquiry #{inquiry.id} - {inquiry.category}",
+#                     f"""
+# Dear {inquiry.full_name},
+# The status of your inquiry for {inquiry.sub_service} has been updated:
+# Previous Status: {old_status}
+# New Status: {new_status}
+# Please feel free to reach out with any questions.
+# Best regards,
+# {inquiry.company.company_name}
+#                     """,
+#                     'fybproject6@gmail.com',
+#                     [inquiry.email],
+#                     fail_silently=True,
+#                 )
+#         except Exception as email_error:
+#             print(f"Error sending status update email for inquiry {inquiry_id}: {str(email_error)}")
+#         return Response({'message': 'Status updated successfully'}, status=200)
+#     except Exception as e:
+#         return Response({'error': str(e)}, status=500)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_comment_response(request, comment_id):
+    try:
+        comment = get_object_or_404(Comment, id=comment_id, company=request.user.company)
+        company_response = request.data.get('company_response')
+        if not company_response:
+            return Response({'error': 'Company response is required'}, status=400)
+        
+        comment.company_response = company_response
+        comment.save()
+
+        # Optionally send email to user
+        send_mail(
+            f'Update on Your Inquiry #{comment.inquiry.id}',
+            f"""
+Dear {comment.inquiry.full_name},
+
+We have responded to your comment:
+Original Comment: "{comment.comment_text}"
+Our Response: "{company_response}"
+
+Best regards,
+{request.user.company.company_name}
+""",
+            'fybproject6@gmail.com',
+            [comment.inquiry.email],
+            fail_silently=True,
+        )
+
+        return Response({'message': 'Comment response updated successfully'}, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+    
+# views.py
+from .models import Inquiry, Comment, Company
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_comment(request, inquiry_id):
+    try:
+        # Get the inquiry
+        inquiry = get_object_or_404(Inquiry, id=inquiry_id)
+        user = request.user
+
+        # Check permissions: user must be part of the company
+        company = getattr(user, 'company', None)
+        if not (company and inquiry.company == company):
+            return Response({"error": "You do not have permission to comment on this inquiry"}, status=403)
+
+        # Validate comment text
+        comment_text = request.data.get('comment_text')
+        if not comment_text:
+            return Response({"error": "Comment text is required"}, status=400)
+
+        # Create the comment
+        comment = Comment.objects.create(
+            inquiry=inquiry,
+            company=inquiry.company,
+            comment_text=comment_text,
+            created_by=user
+        )
+
+        # Send email notification (optional)
+        try:
+            if inquiry.email:
+                send_mail(
+                    f"Update on Your Inquiry #{inquiry.id} - {inquiry.category}",
+                    f"""
+Dear {inquiry.full_name},
+We have an update regarding your inquiry for {inquiry.sub_service}:
+Comment from {company.company_name}:
+"{comment_text}"
+Please feel free to reach out if you have any questions.
+Best regards,
+{company.company_name}
+                    """,
+                    'fybproject6@gmail.com',
+                    [inquiry.email],
+                    fail_silently=True,
+                )
+        except Exception as email_error:
+            print(f"Error sending email for comment on inquiry {inquiry_id}: {str(email_error)}")
+
+        serializer = CommentSerializer(comment)
+        return Response({
+            "message": "Comment added successfully",
+            "comment": serializer.data
+        }, status=200)
+    except Inquiry.DoesNotExist:
+        return Response({"error": "No Inquiry matches the given query"}, status=404)
+    except Exception as e:
+        print(f"Error adding comment for inquiry {inquiry_id}: {str(e)}")
+        return Response({"error": "Failed to add comment due to an internal error"}, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_client_comment(request, inquiry_id):
+    try:
+        # Get the inquiry
+        inquiry = get_object_or_404(Inquiry, id=inquiry_id)
+        user = request.user
+
+        # Check permissions: user must be the inquiry owner
+        if inquiry.user != user:
+            return Response({"error": "You do not have permission to comment on this inquiry"}, status=403)
+
+        # Validate comment text
+        comment_text = request.data.get('comment_text')
+        if not comment_text:
+            return Response({"error": "Comment text is required"}, status=400)
+
+        # Create the comment
+        comment = Comment.objects.create(
+            inquiry=inquiry,
+            company=inquiry.company,
+            comment_text=comment_text,
+            created_by=user
+        )
+
+        # Send email notification to company (optional)
+        try:
+            if inquiry.company and inquiry.company.email:
+                send_mail(
+                    f"New Client Comment on Inquiry #{inquiry.id} - {inquiry.category}",
+                    f"""
+Dear {inquiry.company.company_name},
+You have a new comment on your inquiry for {inquiry.sub_service}:
+Comment from {inquiry.full_name}:
+"{comment_text}"
+Please feel free to respond via the platform.
+Best regards,
+{inquiry.full_name}
+                    """,
+                    'fybproject6@gmail.com',
+                    [inquiry.company.email],
+                    fail_silently=True,
+                )
+        except Exception as email_error:
+            print(f"Error sending email for client comment on inquiry {inquiry_id}: {str(email_error)}")
+
+        serializer = CommentSerializer(comment)
+        return Response({
+            "message": "Comment added successfully",
+            "comment": serializer.data
+        }, status=200)
+    except Inquiry.DoesNotExist:
+        return Response({"error": "No Inquiry matches the given query"}, status=404)
+    except Exception as e:
+        print(f"Error adding client comment for inquiry {inquiry_id}: {str(e)}")
+        return Response({"error": "Failed to add comment due to an internal error"}, status=500)
+    
+
 
 

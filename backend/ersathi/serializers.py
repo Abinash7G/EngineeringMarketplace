@@ -212,16 +212,146 @@ class AppointmentSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
-        fields = ['id', 'comment_text', 'created_at']
+        fields = ['id', 'comment_text','company_response', 'created_at']
 class EngineeringConsultingDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = EngineeringConsultingData
         fields = '__all__'
 
 class BuildingConstructionDataSerializer(serializers.ModelSerializer):
+    # Override file fields to return absolute URLs
+    lalpurja = serializers.SerializerMethodField()
+    napi_naksa = serializers.SerializerMethodField()
+    tax_clearance = serializers.SerializerMethodField()
+    approved_building_drawings = serializers.SerializerMethodField()
+    soil_test_report = serializers.SerializerMethodField()
+    structural_stability_certificate = serializers.SerializerMethodField()
+    house_design_approval = serializers.SerializerMethodField()
+    neighbour_consent = serializers.SerializerMethodField()
+    iee_report = serializers.SerializerMethodField()
+    fire_safety_certificate = serializers.SerializerMethodField()
+    lift_permit = serializers.SerializerMethodField()
+    parking_layout_plan = serializers.SerializerMethodField()
+    owner_permission_letter = serializers.SerializerMethodField()
+    existing_structure_analysis = serializers.SerializerMethodField()
+    renovation_plan = serializers.SerializerMethodField()
+    noc_municipality = serializers.SerializerMethodField()
+    waste_management_plan = serializers.SerializerMethodField()
+    permit_document = serializers.SerializerMethodField()
+    completion_certificate = serializers.SerializerMethodField()
+    
+    # Override JSON fields with file paths to return absolute URLs
+    progress_photos = serializers.SerializerMethodField()
+    inspection_reports = serializers.SerializerMethodField()
+
     class Meta:
         model = BuildingConstructionData
-        fields = '__all__'
+        fields = [
+            'id', 'inquiry', 'lalpurja', 'napi_naksa', 'tax_clearance', 'approved_building_drawings',
+            'soil_test_report', 'structural_stability_certificate', 'house_design_approval', 'neighbour_consent',
+            'iee_report', 'fire_safety_certificate', 'lift_permit', 'parking_layout_plan',
+            'commercial_special_requirements', 'type_of_building', 'existing_building_details',
+            'owner_permission_letter', 'existing_structure_analysis', 'renovation_plan', 'noc_municipality',
+            'waste_management_plan', 'area_to_renovate', 'budget_estimate', 'renovation_special_requirements',
+            'permit_application_date', 'permit_status', 'permit_document', 'construction_start_date',
+            'construction_phase', 'progress_percentage', 'progress_photos', 'inspection_dates',
+            'inspection_reports', 'completion_certificate_application_date', 'completion_certificate',
+            'handover_date', 'warranty_details'
+        ]
+
+    def get_file_url(self, obj, field_name):
+        try:
+            field = getattr(obj, field_name)
+            if field and hasattr(field, 'url'):
+                request = self.context.get('request')
+                return request.build_absolute_uri(field.url) if request else field.url
+            return None
+        except Exception as e:
+            print(f"Error serializing {field_name} for BuildingConstructionData {obj.id}: {str(e)}")
+            return None
+
+    # Define methods for each file field
+    def get_lalpurja(self, obj):
+        return self.get_file_url(obj, 'lalpurja')
+
+    def get_napi_naksa(self, obj):
+        return self.get_file_url(obj, 'napi_naksa')
+
+    def get_tax_clearance(self, obj):
+        return self.get_file_url(obj, 'tax_clearance')
+
+    def get_approved_building_drawings(self, obj):
+        return self.get_file_url(obj, 'approved_building_drawings')
+
+    def get_soil_test_report(self, obj):
+        return self.get_file_url(obj, 'soil_test_report')
+
+    def get_structural_stability_certificate(self, obj):
+        return self.get_file_url(obj, 'structural_stability_certificate')
+
+    def get_house_design_approval(self, obj):
+        return self.get_file_url(obj, 'house_design_approval')
+
+    def get_neighbour_consent(self, obj):
+        return self.get_file_url(obj, 'neighbour_consent')
+
+    def get_iee_report(self, obj):
+        return self.get_file_url(obj, 'iee_report')
+
+    def get_fire_safety_certificate(self, obj):
+        return self.get_file_url(obj, 'fire_safety_certificate')
+
+    def get_lift_permit(self, obj):
+        return self.get_file_url(obj, 'lift_permit')
+
+    def get_parking_layout_plan(self, obj):
+        return self.get_file_url(obj, 'parking_layout_plan')
+
+    def get_owner_permission_letter(self, obj):
+        return self.get_file_url(obj, 'owner_permission_letter')
+
+    def get_existing_structure_analysis(self, obj):
+        return self.get_file_url(obj, 'existing_structure_analysis')
+
+    def get_renovation_plan(self, obj):
+        return self.get_file_url(obj, 'renovation_plan')
+
+    def get_noc_municipality(self, obj):
+        return self.get_file_url(obj, 'noc_municipality')
+
+    def get_waste_management_plan(self, obj):
+        return self.get_file_url(obj, 'waste_management_plan')
+
+    def get_permit_document(self, obj):
+        return self.get_file_url(obj, 'permit_document')
+
+    def get_completion_certificate(self, obj):
+        return self.get_file_url(obj, 'completion_certificate')
+
+    # Handle JSON fields with file paths
+    def get_progress_photos(self, obj):
+        try:
+            photos = obj.progress_photos or []
+            request = self.context.get('request')
+            return [
+                request.build_absolute_uri(f"/media/{path}") if request else f"/media/{path}"
+                for path in photos
+            ] if photos else []
+        except Exception as e:
+            print(f"Error serializing progress_photos for BuildingConstructionData {obj.id}: {str(e)}")
+            return []
+
+    def get_inspection_reports(self, obj):
+        try:
+            reports = obj.inspection_reports or []
+            request = self.context.get('request')
+            return [
+                request.build_absolute_uri(f"/media/{path}") if request else f"/media/{path}"
+                for path in reports
+            ] if reports else []
+        except Exception as e:
+            print(f"Error serializing inspection_reports for BuildingConstructionData {obj.id}: {str(e)}")
+            return []
 
 class PostConstructionMaintenanceDataSerializer(serializers.ModelSerializer):
     class Meta:
