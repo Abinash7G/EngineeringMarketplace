@@ -4,12 +4,12 @@ import API from "../services/api"; // Axios instance
 //import { FaGoogle } from "react-icons/fa"; // Google icon
 import { TextField, Button, Typography, Box, Container } from "@mui/material";
 
+
 const Login = () => {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [email, setEmail] = useState(""); // For forgot password
   const [message, setMessage] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false); // Toggle forgot password view
-
   const navigate = useNavigate(); // Hook for navigation
 
   const handleChange = (e) => {
@@ -183,7 +183,6 @@ const Login = () => {
           Create one
         </span>
       </Typography>
-
       {message && (
         <Typography
           variant="body1"
@@ -192,6 +191,7 @@ const Login = () => {
         >
           {message}
         </Typography>
+        
       )}
     </Container>
   );

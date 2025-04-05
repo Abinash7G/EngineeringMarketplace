@@ -11,9 +11,12 @@ import {
   Paper,
   IconButton,
   CircularProgress,
+  Box,
 } from "@mui/material";
 import { Visibility } from "@mui/icons-material";
 import axios from "axios";
+import ClientNavbar from "./ClientNavbar.js"; // Same directory
+import Footer from "../pages/footer.js";
 
 const CDAgreements = () => {
   const [agreements, setAgreements] = useState([]);
@@ -57,23 +60,17 @@ const CDAgreements = () => {
         return;
       }
 
-      // Fetch PDF with authentication
       const response = await axios.get(documentUrl, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: "blob",
       });
 
-      // Create Blob with proper MIME type
       const blob = new Blob([response.data], { type: "application/pdf" });
       const viewUrl = window.URL.createObjectURL(blob);
-
-      // Open the PDF in a new tab
       window.open(viewUrl, "_blank");
-
-      // Cleanup the temporary URL after a delay to free memory
       setTimeout(() => {
         window.URL.revokeObjectURL(viewUrl);
-      }, 10000); // Revoke after 10 seconds
+      }, 10000);
     } catch (error) {
       console.error("Failed to open document:", error);
       if (error.response && error.response.status === 404) {
@@ -84,90 +81,107 @@ const CDAgreements = () => {
     }
   };
 
+  const handleNavigateToProfile = () => {
+    window.location.href = "/client/profile";
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
-        Client Agreements
-      </Typography>
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      {console.log("Rendering CDAgreements with ClientNavbar and Footer")}
+      <ClientNavbar
+        wishlist={[]}
+        cartItems={[]}
+        onNavigateToProfile={handleNavigateToProfile}
+      />
+      <Container maxWidth="lg" sx={{ mt: 10, mb: 4, flex: 1, pt: 2 }}>
+        <Typography
+          variant="h4"
+          gutterBottom
+          sx={{ fontWeight: "bold", mb: 4 }}
+        >
+          Client Agreements
+        </Typography>
 
-      {loading ? (
-        <CircularProgress sx={{ display: "block", mx: "auto" }} />
-      ) : (
-        <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
-          <Table aria-label="client agreements table">
-            <TableHead sx={{ bgcolor: "primary.main" }}>
-              <TableRow>
-                {["Client Name", "Service", "Status", "Created At", "Original Agreement", "Signed Agreement"].map(
-                  (header) => (
-                    <TableCell key={header} sx={{ color: "white", fontWeight: "bold" }}>
-                      {header}
-                    </TableCell>
-                  )
-                )}
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {agreements.length === 0 ? (
+        {loading ? (
+          <CircularProgress sx={{ display: "block", mx: "auto" }} />
+        ) : (
+          <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
+            <Table aria-label="client agreements table">
+              <TableHead sx={{ bgcolor: "primary.main" }}>
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    No agreements found
-                  </TableCell>
+                  {["Client Name", "Service", "Status", "Created At", "Original Agreement", "Signed Agreement"].map(
+                    (header) => (
+                      <TableCell key={header} sx={{ color: "white", fontWeight: "bold" }}>
+                        {header}
+                      </TableCell>
+                    )
+                  )}
                 </TableRow>
-              ) : (
-                agreements.map((agreement) => (
-                  <TableRow key={agreement.id} hover>
-                    <TableCell>{agreement.inquiry?.full_name || "N/A"}</TableCell>
-                    <TableCell>{agreement.service?.name || "N/A"}</TableCell>
-                    <TableCell
-                      sx={{
-                        color: agreement.status === "Signed" ? "green" : "inherit",
-                        fontWeight: agreement.status === "Signed" ? "bold" : "normal",
-                      }}
-                    >
-                      {agreement.status}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(agreement.created_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      {agreement.document ? (
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleViewAgreement(agreement.document)}
-                          title="View original agreement"
-                        >
-                          <Visibility />
-                        </IconButton>
-                      ) : (
-                        "Not available"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {agreement.signed_document ? (
-                        <IconButton
-                          color="success"
-                          onClick={() => handleViewAgreement(agreement.signed_document)}
-                          title="View signed agreement"
-                        >
-                          <Visibility />
-                        </IconButton>
-                      ) : (
-                        "Not uploaded"
-                      )}
+              </TableHead>
+
+              <TableBody>
+                {agreements.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      No agreements found
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </Container>
+                ) : (
+                  agreements.map((agreement) => (
+                    <TableRow key={agreement.id} hover>
+                      <TableCell>{agreement.inquiry?.full_name || "N/A"}</TableCell>
+                      <TableCell>{agreement.service?.name || "N/A"}</TableCell>
+                      <TableCell
+                        sx={{
+                          color: agreement.status === "Signed" ? "green" : "inherit",
+                          fontWeight: agreement.status === "Signed" ? "bold" : "normal",
+                        }}
+                      >
+                        {agreement.status}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(agreement.created_at).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        {agreement.document ? (
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleViewAgreement(agreement.document)}
+                            title="View original agreement"
+                          >
+                            <Visibility />
+                          </IconButton>
+                        ) : (
+                          "Not available"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {agreement.signed_document ? (
+                          <IconButton
+                            color="success"
+                            onClick={() => handleViewAgreement(agreement.signed_document)}
+                            title="View signed agreement"
+                          >
+                            <Visibility />
+                          </IconButton>
+                        ) : (
+                          "Not uploaded"
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Container>
+      <Footer />
+    </Box>
   );
 };
 

@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import ClientNavbar from "../components/ClientNavbar";  
 import Products from "../components/CDProduct";
 import CDCompany from "../components/CDCompany"; 
+import Footer from "../pages/footer"; // Import the Footer component
+
 import {
   fetchUserProfile,
   fetchCartItems,
@@ -134,7 +136,10 @@ const ClientDashboard = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <Footer />
+
     </Box>
+    
   );
 };
 

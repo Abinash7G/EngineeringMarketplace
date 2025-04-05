@@ -47,6 +47,7 @@ import ClientServices from './components/ClientServices';
 const App = () => {
   const location = useLocation(); // Correct hook name
   const navbarRoutes = ["/","/home", "/login", "/signup", "/companyregistration"];
+  
 
   return (
     <>
