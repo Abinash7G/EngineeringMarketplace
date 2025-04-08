@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaUsers, FaTools, FaChartBar, FaCog, FaSignOutAlt, FaCheck, FaTimes } from "react-icons/fa";
+
 import {
   Box,
   Typography,
@@ -66,7 +67,7 @@ const Sidebar = () => {
           </ListItem>
 
           <ListItem disablePadding>
-            <ListItemButton component={Link} to="/admin/services">
+            <ListItemButton component={Link} to="/admin/Services">
               <ListItemIcon sx={{ color: "white" }}>
                 <FaTools />
               </ListItemIcon>

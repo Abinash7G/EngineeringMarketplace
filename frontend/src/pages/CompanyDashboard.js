@@ -38,7 +38,7 @@ import Documents from "../components/Documents";
 import ProfileSettings from "../components/ProfileSettings";
 import CompanyUploadForm from "../components/CompanyUploadForm";
 import InquiriesList from "../components/InquiriesList";
-import Agreements from "../components/Agreements";
+import Agreements from "../Company/Agreements";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 
@@ -112,44 +112,44 @@ useEffect(() => {
 
   const companyId = localStorage.getItem("company_id");
   const accessToken = localStorage.getItem("access_token");
-  if (companyId && accessToken) {
-    const connectWebSocket = () => {
-      const wsUrl = `ws://127.0.0.1:8000/ws/inquiries/${companyId}/?token=${accessToken}`;
-      wsRef.current = new WebSocket(wsUrl);
+  // if (companyId && accessToken) {
+  //   const connectWebSocket = () => {
+  //     const wsUrl = `ws://127.0.0.1:8000/ws/inquiries/${companyId}/?token=${accessToken}`;
+  //     wsRef.current = new WebSocket(wsUrl);
 
-      wsRef.current.onopen = () => {
-        console.log("WebSocket connected to:", wsUrl);
-        setError(null); // Clear any previous WebSocket errors
-      };
+  //     // wsRef.current.onopen = () => {
+  //     //   console.log("WebSocket connected to:", wsUrl);
+  //     //   setError(null); // Clear any previous WebSocket errors
+  //     // };
 
-      wsRef.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === "inquiry_update") {
-          setHasNewInquiries(true);
-          fetchInquiries().catch((err) => console.error("Fetch error after WebSocket:", err));
-        }
-      };
+  //     wsRef.current.onmessage = (event) => {
+  //       const data = JSON.parse(event.data);
+  //       if (data.type === "inquiry_update") {
+  //         setHasNewInquiries(true);
+  //         fetchInquiries().catch((err) => console.error("Fetch error after WebSocket:", err));
+  //       }
+  //     };
 
-      wsRef.current.onclose = (event) => {
-        console.log("WebSocket disconnected, attempting to reconnect...", event);
-        setError("WebSocket disconnected. Reconnecting...");
-        setTimeout(connectWebSocket, 5000); // Attempt to reconnect after 5 seconds
-      };
+  //     wsRef.current.onclose = (event) => {
+  //       console.log("WebSocket disconnected, attempting to reconnect...", event);
+  //       setError("WebSocket disconnected. Reconnecting...");
+  //       setTimeout(connectWebSocket, 5000); // Attempt to reconnect after 5 seconds
+  //     };
 
-      wsRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        setError("WebSocket connection failed. Please check your network or server.");
-      };
-    };
+  //     wsRef.current.onerror = (error) => {
+  //       console.error("WebSocket error:", error);
+  //       setError("WebSocket connection failed. Please check your network or server.");
+  //     };
+  //   };
 
-    connectWebSocket();
-  }
+  //   connectWebSocket();
+  // }
 
-  return () => {
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
-  };
+  // return () => {
+  //   if (wsRef.current) {
+  //     wsRef.current.close();
+  //   }
+  // };
 }, [navigate]);
 
   const fetchInquiries = async () => {

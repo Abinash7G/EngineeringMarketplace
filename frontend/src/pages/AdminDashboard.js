@@ -1,10 +1,9 @@
-// import React, { useState, useEffect } from "react";  
+// import React, { useState, useEffect } from "react";
 // import API from "../services/api";
 // import { FaUsers, FaTools, FaChartBar, FaBuilding } from "react-icons/fa";
 // import Sidebar from "../components/Sidebar";
 // import Chart from "../components/Chart";
 // import { useNavigate } from "react-router-dom";
-
 
 // import {
 //   Box,
@@ -14,9 +13,8 @@
 //   Grid,
 //   Button,
 //   Table,
-//   TableBody,
-//   TableCell,
 //   TableContainer,
+//   TableCell,
 //   TableHead,
 //   TableRow,
 //   Paper,
@@ -24,28 +22,45 @@
 //   DialogTitle,
 //   DialogContent,
 //   DialogActions,
+//   TableBody
+
 // } from "@mui/material";
 
 // const AdminDashboard = () => {
 //   const navigate = useNavigate();
-//   // State variables for companies and safety training companies.
+
+//   // State variables for companies, safety training companies, and dashboard stats
 //   const [companies, setCompanies] = useState([]); // Unapproved companies
 //   const [safetyCompanies, setSafetyCompanies] = useState([]); // Approved companies with Safety Training
 //   const [selectedCompany, setSelectedCompany] = useState(null); // Details for dialog
 //   const [openDialog, setOpenDialog] = useState(false); // Dialog open state
+//   const [totalUsers, setTotalUsers] = useState(0); // Total users
+//   const [totalCompanies, setTotalCompanies] = useState(0); // Total approved companies
+//   const [totalServices, setTotalServices] = useState(0); // Total services
 
-//   // Fetch all companies when the component mounts.
+//   // Fetch dashboard stats (total users, total approved companies, and total services)
+//   useEffect(() => {
+//     API.get("/dashboard-stats/")
+//       .then((response) => {
+//         setTotalUsers(response.data.total_users);
+//         setTotalCompanies(response.data.total_approved_companies);
+//         setTotalServices(response.data.total_services); // Assuming the API returns this
+//       })
+//       .catch((error) => console.error("Error fetching dashboard stats:", error));
+//   }, []);
+
+//   // Fetch all companies when the component mounts
 //   useEffect(() => {
 //     API.get("/company-registration-list/")
 //       .then((response) => {
 //         const allCompanies = response.data;
 
-//         // Filter out unapproved companies.
+//         // Filter out unapproved companies
 //         const unapprovedCompanies = allCompanies.filter(
 //           (company) => !company.is_approved && !company.is_rejected
 //         );
 
-//         // Filter approved companies that include Safety Training module (assumed id = 5).
+//         // Filter approved companies that include Safety Training module (assumed id = 5)
 //         const filteredSafetyCompanies = allCompanies.filter(
 //           (company) =>
 //             company.is_approved && company.services_provided.includes(5)
@@ -57,28 +72,30 @@
 //       .catch((error) => console.error("Error fetching companies:", error));
 //   }, []);
 
-//   // Close the details dialog.
+//   // Close the details dialog
 //   const handleCloseDialog = () => {
 //     setOpenDialog(false);
 //     setSelectedCompany(null);
 //   };
 
-//   // Approve a company.
+//   // Approve a company
 //   const approveCompany = (id) => {
 //     API.post(`/approve-company/${id}/`)
 //       .then(() => {
-//         // Remove the company from the unapproved list.
+//         // Remove the company from the unapproved list
 //         setCompanies(companies.filter((company) => company.id !== id));
+//         // Update total approved companies
+//         setTotalCompanies(totalCompanies + 1);
 //         alert(`Company with ID: ${id} approved successfully!`);
 //       })
 //       .catch((error) => console.error("Error approving company:", error));
 //   };
 
-//   // Reject a company.
+//   // Reject a company
 //   const rejectCompany = (id) => {
 //     API.post(`/reject-company/${id}/`)
 //       .then(() => {
-//         // Remove the company from the unapproved list.
+//         // Remove the company from the unapproved list
 //         setCompanies(companies.filter((company) => company.id !== id));
 //         alert(`Company with ID: ${id} rejected successfully!`);
 //       })
@@ -111,9 +128,9 @@
 //         {/* Overview Cards */}
 //         <Grid container spacing={3} sx={{ marginBottom: "20px" }}>
 //           {[
-//             { title: "Total Users", value: "1200", icon: <FaUsers /> },
-//             { title: "Active Services", value: "350", icon: <FaTools /> },
-//             { title: "Total Companies", value: "200", icon: <FaBuilding /> },
+//             { title: "Total Users", value: totalUsers, icon: <FaUsers /> },
+//             { title: "Active Services", value: totalServices, icon: <FaTools /> }, // Updated to use totalServices
+//             { title: "Total Companies", value: totalCompanies, icon: <FaBuilding /> },
 //             { title: "Total Revenue", value: "$45,000", icon: <FaChartBar /> },
 //           ].map((item, index) => (
 //             <Grid item xs={12} sm={6} md={3} key={index}>
@@ -277,7 +294,6 @@
 //                 <strong>Services Provided:</strong>{" "}
 //                 {selectedCompany.services_provided.join(", ")}
 //               </Typography>
-//               {/* Add any additional registration details here */}
 //             </Box>
 //           ) : (
 //             <Typography variant="body1">No details available.</Typography>
@@ -289,15 +305,14 @@
 //           </Button>
 //         </DialogActions>
 //       </Dialog>
-      
 //     </Box>
 //   );
 // };
 
 // export default AdminDashboard;
-import React, { useState, useEffect } from "react";  
+import React, { useState, useEffect } from "react";
 import API from "../services/api";
-import { FaUsers, FaTools, FaChartBar, FaBuilding } from "react-icons/fa";
+import { FaUsers, FaChartBar, FaBuilding } from "react-icons/fa"; // Removed FaTools
 import Sidebar from "../components/Sidebar";
 import Chart from "../components/Chart";
 import { useNavigate } from "react-router-dom";
@@ -310,9 +325,8 @@ import {
   Grid,
   Button,
   Table,
-  TableBody,
-  TableCell,
   TableContainer,
+  TableCell,
   TableHead,
   TableRow,
   Paper,
@@ -320,11 +334,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TableBody,
 } from "@mui/material";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  
+
   // State variables for companies, safety training companies, and dashboard stats
   const [companies, setCompanies] = useState([]); // Unapproved companies
   const [safetyCompanies, setSafetyCompanies] = useState([]); // Approved companies with Safety Training
@@ -332,6 +347,7 @@ const AdminDashboard = () => {
   const [openDialog, setOpenDialog] = useState(false); // Dialog open state
   const [totalUsers, setTotalUsers] = useState(0); // Total users
   const [totalCompanies, setTotalCompanies] = useState(0); // Total approved companies
+  // Removed totalServices state since we're removing the Active Services section
 
   // Fetch dashboard stats (total users and total approved companies)
   useEffect(() => {
@@ -339,6 +355,7 @@ const AdminDashboard = () => {
       .then((response) => {
         setTotalUsers(response.data.total_users);
         setTotalCompanies(response.data.total_approved_companies);
+        // Removed setTotalServices since we're not displaying Active Services
       })
       .catch((error) => console.error("Error fetching dashboard stats:", error));
   }, []);
@@ -423,7 +440,6 @@ const AdminDashboard = () => {
         <Grid container spacing={3} sx={{ marginBottom: "20px" }}>
           {[
             { title: "Total Users", value: totalUsers, icon: <FaUsers /> },
-            { title: "Active Services", value: "350", icon: <FaTools /> },
             { title: "Total Companies", value: totalCompanies, icon: <FaBuilding /> },
             { title: "Total Revenue", value: "$45,000", icon: <FaChartBar /> },
           ].map((item, index) => (

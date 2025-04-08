@@ -39,6 +39,9 @@ import CDConsultingInquiryForm from './components/CDConsultingInquiryForm';
 import InquiriesList from './components/InquiriesList';
 import CDAgreements from './components/CDAgreements';
 import ClientServices from './components/ClientServices';
+import AboutUsPage from './pages/aboutus';
+import Services from './Admin/Services';
+import Subscription from './Company/Subscription';
 //import Agreements from './components/Agreements';
 
 
@@ -46,7 +49,7 @@ import ClientServices from './components/ClientServices';
 
 const App = () => {
   const location = useLocation(); // Correct hook name
-  const navbarRoutes = ["/","/home", "/login", "/signup", "/companyregistration"];
+  const navbarRoutes = ["/","/home", "/login", "/signup", "/companyregistration", "/about"];
   
 
   return (
@@ -54,7 +57,7 @@ const App = () => {
       {navbarRoutes.includes(location.pathname) && <Navbar />}
       <Routes>
       <Route path="/" element={<Home />} />
-        
+        <Route path="/about" element={<AboutUsPage/>} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/companyregistration" element={<CompanyRegistration />} />
@@ -93,9 +96,11 @@ const App = () => {
         <Route path="/admin/rejected-companies" element={<ApprovedCompanies/>} /> 
         <Route path="/admin/approved-companies" element={<RejectedCompanies/>} /> 
         <Route path="/admin/rent-verification" element={<RentVerificationAdmin/>} />
+        <Route path="/admin/Services" element={<Services/>} />
         {/* <Route path="/client/agreements" element={<Agreements/>} /> */}
         <Route path="/client/agreements" element={<CDAgreements/>} />
         <Route path="/client/clientservices" element={<ClientServices/>} />
+        <Route path="/company/subscription" element={<Subscription/>} />
 
         
         
