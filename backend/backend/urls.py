@@ -20,6 +20,7 @@ from ersathi.views import (
     RentVerificationCreateView,
     RentVerificationListView,
     RentVerificationUserUpdateView,
+   
     SubmitInquiryView,
     Test,
     UpdateAgreementView,
@@ -85,15 +86,13 @@ from ersathi.views import (
    
 )
 
-
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/services/', get_services, name='get_services'),
-
-
+   
     # Auth
     path('api/signup/', SignupView.as_view(), name='signup'),
     path('api/login/', LoginView.as_view(), name='login'),
@@ -128,7 +127,7 @@ urlpatterns = [
     path('get-company-team-members/<int:company_id>/', get_company_team_members, name='get-company-team-members'),
     path('api/company-services/<int:company_id>/', get_company_services_by_id, name='get_company_services_by_id'),
 #
-    path('api/submit-inquiry/<int:company_id>/', views.SubmitInquiryView.as_view(), name='submit-inquiry'),
+    path('api/submit-inquiry/<int:company_id>/', SubmitInquiryView.as_view(), name='submit-inquiry'),
     path('api/company-inquiries/', CompanyInquiriesView.as_view(), name='company-inquiries'),
     path('api/update-inquiry-status/<int:inquiry_id>/', UpdateInquiryStatusView.as_view(), name='update-inquiry-status'),
     path('company-appointments/', CompanyAppointmentsView.as_view(), name='company-appointments'),
@@ -206,10 +205,13 @@ urlpatterns = [
     path('api/update-construction-progress/<int:inquiry_id>/', views.update_construction_progress, name='update-construction-progress'),
     path('api/update-comment-response/<int:comment_id>/', views.update_comment_response, name='update-comment-response'),
     path('api/update-construction-progress/<int:inquiry_id>/', views.update_construction_progress, name='update-construction-progress'),
-
-
-
-
+    #Admin
+    path('api/service-categories/', views.service_categories, name='service_categories'),
+    path('api/service-categories/<int:category_id>/', views.update_service_category, name='update_service_category'),
+    path('api/service-categories/<int:category_id>/delete/', views.delete_service_category, name='delete_service_category'),
+    path('api/services/create/', views.create_service, name='create_service'),
+    path('api/services/<int:service_id>/', views.update_service, name='update_service'),
+    path('api/services/<int:service_id>/delete/', views.delete_service, name='delete_service'),
 ]
 # Serve media files during development
 if settings.DEBUG:

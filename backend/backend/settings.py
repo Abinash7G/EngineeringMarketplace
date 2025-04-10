@@ -32,7 +32,7 @@ ALLOWED_HOSTS = ["*"]
 # Application definition
 
 INSTALLED_APPS = [
-    'daphne',
+    # 'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'social_django',
     'django_rest_passwordreset',
-    'channels',
+    # 'channels',
     
 
 ]
@@ -207,16 +207,16 @@ SIMPLE_JWT = {
 # STRIPE_SECRET_KEY = 'sk_test_51QnOg8HFXrh998KlLdTxh4bVatiAoAVCKbtUU5jSUzUcULjFznLuI7sRivfgc38kbsG2JQ5UqMArdbHZSJbwBFXH00AviwVSFp'
 # STRIPE_PUBLISHABLE_KEY = 'pk_test_51QnOg8HFXrh998Klft0d4A2QId9hPWxhNlU12COVn2WXlCgzx6BreTWwIE6zNBjINEMd1wANva7HvkWhHKS3XUnp00kQmaYhHn'
 
-ASGI_APPLICATION = 'backend.asgi.application'
+# ASGI_APPLICATION = 'backend.asgi.application'
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
-        },
-    },
-}
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             "hosts": [('127.0.0.1', 6379)],
+#         },
+#     },
+# }
 
 
 MEDIA_URL = '/media/'

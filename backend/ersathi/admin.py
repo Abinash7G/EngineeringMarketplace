@@ -4,14 +4,16 @@ from django.contrib import admin
 from django.contrib import admin
 from .models import CompanyServices, Service, ServiceCategory
 from .models import Product
-
+from .models import RentVerification, Agreement, VerificationImage
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'category')
     
 admin.site.register(ServiceCategory)
 admin.site.register(CompanyServices)
-    
+admin.site.register(RentVerification)
+admin.site.register(Agreement)
+admin.site.register(VerificationImage)
 from .models import CustomUser, Company
 
 # Avoid duplicate registration

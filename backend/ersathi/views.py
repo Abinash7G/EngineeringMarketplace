@@ -3403,7 +3403,220 @@ Best regards,
     except Exception as e:
         print(f"Error adding client comment for inquiry {inquiry_id}: {str(e)}")
         return Response({"error": "Failed to add comment due to an internal error"}, status=500)
-    
 
 
 
+#ADMIN
+# @csrf_exempt
+def service_categories(request):
+    """Handle GET and POST requests for service categories"""
+    if request.method == 'GET':
+        """Returns all service categories"""
+        try:
+            categories = ServiceCategory.objects.all()
+            data = [
+                {
+                    "id": category.id,
+                    "name": category.name
+                }
+                for category in categories
+            ]
+            return JsonResponse(data, safe=False)
+        except Exception as e:
+            logger.error(f"Error in get_service_categories: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=400)
+
+    elif request.method == 'POST':
+        """Create a new service category"""
+        try:
+            data = json.loads(request.body)
+            name = data.get('name')
+            if not name:
+                return JsonResponse({"error": "Category name is required"}, status=400)
+
+            # Check if category already exists
+            if ServiceCategory.objects.filter(name=name).exists():
+                return JsonResponse({"error": "Category with this name already exists"}, status=400)
+
+            category = ServiceCategory.objects.create(name=name)
+            return JsonResponse({
+                "id": category.id,
+                "name": category.name
+            }, status=201)
+        except Exception as e:
+            logger.error(f"Error creating service category: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+# @csrf_exempt
+def create_service_category(request):
+    """Create a new service category"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            name = data.get('name')
+            if not name:
+                return JsonResponse({"error": "Category name is required"}, status=400)
+
+            # Check if category already exists
+            if ServiceCategory.objects.filter(name=name).exists():
+                return JsonResponse({"error": "Category with this name already exists"}, status=400)
+
+            category = ServiceCategory.objects.create(name=name)
+            return JsonResponse({
+                "id": category.id,
+                "name": category.name
+            }, status=201)
+        except Exception as e:
+            logger.error(f"Error creating service category: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+# @csrf_exempt
+def update_service_category(request, category_id):
+    """Update an existing service category"""
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            name = data.get('name')
+            if not name:
+                return JsonResponse({"error": "Category name is required"}, status=400)
+
+            try:
+                category = ServiceCategory.objects.get(id=category_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Category not found"}, status=404)
+
+            # Check if the new name already exists (excluding the current category)
+            if ServiceCategory.objects.filter(name=name).exclude(id=category_id).exists():
+                return JsonResponse({"error": "Category with this name already exists"}, status=400)
+
+            category.name = name
+            category.save()
+            return JsonResponse({
+                "id": category.id,
+                "name": category.name
+            })
+        except Exception as e:
+            logger.error(f"Error updating service category: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+# @csrf_exempt
+def delete_service_category(request, category_id):
+    """Delete a service category"""
+    if request.method == 'DELETE':
+        try:
+            try:
+                category = ServiceCategory.objects.get(id=category_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Category not found"}, status=404)
+
+            # Check if the category has associated services
+            if category.services.exists():
+                return JsonResponse({"error": "Cannot delete category with associated services"}, status=400)
+
+            category.delete()
+            return JsonResponse({"message": "Category deleted successfully"})
+        except Exception as e:
+            logger.error(f"Error deleting service category: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+# @csrf_exempt
+def create_service(request):
+    """Create a new service"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            name = data.get('name')
+            category_id = data.get('category_id')
+
+            if not name:
+                return JsonResponse({"error": "Service name is required"}, status=400)
+            if not category_id:
+                return JsonResponse({"error": "Category ID is required"}, status=400)
+
+            try:
+                category = ServiceCategory.objects.get(id=category_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Category not found"}, status=404)
+
+            # Check if service with this name already exists in the category
+            if Service.objects.filter(name=name, category=category).exists():
+                return JsonResponse({"error": "Service with this name already exists in this category"}, status=400)
+
+            service = Service.objects.create(name=name, category=category)
+            return JsonResponse({
+                "id": service.id,
+                "name": service.name,
+                "category_id": service.category.id,
+                "category": service.category.name
+            }, status=201)
+        except Exception as e:
+            logger.error(f"Error creating service: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+# @csrf_exempt
+def update_service(request, service_id):
+    """Update an existing service"""
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            name = data.get('name')
+            category_id = data.get('category_id')
+
+            if not name:
+                return JsonResponse({"error": "Service name is required"}, status=400)
+            if not category_id:
+                return JsonResponse({"error": "Category ID is required"}, status=400)
+
+            try:
+                service = Service.objects.get(id=service_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Service not found"}, status=404)
+
+            try:
+                category = ServiceCategory.objects.get(id=category_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Category not found"}, status=404)
+
+            # Check if another service with this name already exists in the category
+            if Service.objects.filter(name=name, category=category).exclude(id=service_id).exists():
+                return JsonResponse({"error": "Service with this name already exists in this category"}, status=400)
+
+            service.name = name
+            service.category = category
+            service.save()
+            return JsonResponse({
+                "id": service.id,
+                "name": service.name,
+                "category_id": service.category.id,
+                "category": service.category.name
+            })
+        except Exception as e:
+            logger.error(f"Error updating service: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+# @csrf_exempt
+def delete_service(request, service_id):
+    """Delete a service"""
+    if request.method == 'DELETE':
+        try:
+            try:
+                service = Service.objects.get(id=service_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({"error": "Service not found"}, status=404)
+
+            # Check if the service is used in CompanyServices
+            if CompanyServices.objects.filter(service=service).exists():
+                return JsonResponse({"error": "Cannot delete service that is used by a company"}, status=400)
+
+            service.delete()
+            return JsonResponse({"message": "Service deleted successfully"})
+        except Exception as e:
+            logger.error(f"Error deleting service: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Method not allowed"}, status=405)

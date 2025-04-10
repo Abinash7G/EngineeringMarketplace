@@ -1,10 +1,23 @@
 from rest_framework import serializers
-from .models import BuildingConstructionData, EngineeringConsultingData, PostConstructionMaintenanceData, SafetyTrainingData, Service, Company, Product
+from .models import BuildingConstructionData, EngineeringConsultingData, PostConstructionMaintenanceData, SafetyTrainingData, Service, Company, Product, ServiceCategory
+
+
+
+class ServiceCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceCategory
+        fields = ['id', 'name']
 
 class ServiceSerializer(serializers.ModelSerializer):
+    category = ServiceCategorySerializer(read_only=True)  # Nested serializer for category
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=ServiceCategory.objects.all(), source='category', write_only=True
+    )  # For writing (e.g., when creating/updating a service)
+
     class Meta:
         model = Service
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'category', 'category_id']
+
 
 class CompanyRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
